@@ -140,7 +140,9 @@ See the [ECMAScript spec](http://www.ecma-international.org/ecma-262/6.0/index.h
 ## Specs/tests
 
 #### In browser
-Go to `/test/` 
+
+Go to `/test` 
+
 In Node run:
 
 ``` 
