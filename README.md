@@ -58,6 +58,7 @@ Or in ES6 and TS:
 import JSONPatcherProxy from 'jsonpatcherproxy';
 ```
 ## Usage
+
 ```
 ### Generating patches:
 
@@ -74,7 +75,9 @@ var patches = jsonPatcherProxy.generate();
 //   { op:"replace", path="/contactDetails/phoneNumbers/0/number", value:"123"},
 //   { op:"add", path="/contactDetails/phoneNumbers/1", value:{number:"456"}}];
 ```
+
 ### Receiving patches in a callback:
+
 ```js
 var myObj = { firstName:"Joachim", lastName:"Wester", contactDetails: { phoneNumbers: [ { number:"555-123" }] } };
 var jsonPatcherProxy = new JSONPatcherProxy( myObj );
