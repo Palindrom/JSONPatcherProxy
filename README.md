@@ -162,5 +162,5 @@ npm test
 MIT
 
 
-## ICON
+## Logo
 Designed by _Medical_ from Flaticon.
