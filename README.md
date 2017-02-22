@@ -1,4 +1,4 @@
-![image](https://cloud.githubusercontent.com/assets/17054134/23224247/e0298372-f92d-11e6-9565-5a4b0a0326c0.png)
+![image](https://cloud.githubusercontent.com/assets/17054134/23224348/4a96afbe-f92e-11e6-9a5d-43dd3dac3791.png)
 ===============
 > [ES6 proxy](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy) powered JSON Object observer. That emits JSON patches when changes occur to your object tree.
 
