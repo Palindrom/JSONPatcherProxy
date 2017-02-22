@@ -214,4 +214,6 @@ var JSONPatcherProxy = (function() {
   };
   return JSONPatcherProxy;
 })();
+
 module.exports = JSONPatcherProxy;
+module.exports.default = JSONPatcherProxy;

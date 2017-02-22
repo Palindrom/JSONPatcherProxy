@@ -247,8 +247,8 @@ var JSONPatcherProxy = (function() {
   };
   /**
      * Proxifies the object that was passed in the constructor and returns a proxified mirror of it.
-     * @param {boolean} record - whether to record object changes to a later-retrievable patches array.
-     * @param {function} [callback] - this will be synchronously called with every object change.
+     * @param {Boolean} record - whether to record object changes to a later-retrievable patches array.
+     * @param {Function} [callback] - this will be synchronously called with every object change with a single `patch` as the only parameter.
      */
   JSONPatcherProxy.prototype.observe = function(record, callback) {
     if (!record && !callback) {
@@ -287,8 +287,9 @@ var JSONPatcherProxy = (function() {
   };
   return JSONPatcherProxy;
 })();
-module.exports = JSONPatcherProxy;
 
+module.exports = JSONPatcherProxy;
+module.exports.default = JSONPatcherProxy;
 
 /***/ })
 /******/ ]);
