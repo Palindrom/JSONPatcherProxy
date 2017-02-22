@@ -1,0 +1,9 @@
+language: node_js
+sudo: required
+dist: trusty
+before_script:
+  - npm install
+  - 'export PATH=$PWD/node_modules/.bin:$PATH'
+node_js: 6
+script:
+  - xvfb-run npm test
