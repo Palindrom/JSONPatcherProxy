@@ -59,7 +59,6 @@ import JSONPatcherProxy from 'jsonpatcherproxy';
 ```
 ## Usage
 
-```
 ### Generating patches:
 
 ```js
