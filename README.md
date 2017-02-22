@@ -1,4 +1,4 @@
-JSONPatcherProxy
+![image](https://cloud.githubusercontent.com/assets/17054134/23224247/e0298372-f92d-11e6-9565-5a4b0a0326c0.png)
 ===============
 > [ES6 proxy](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy) powered JSON Object observer. That emits JSON patches when changes occur to your object tree.
 
@@ -156,3 +156,7 @@ npm test
 ## License
 
 MIT
+
+
+## ICON
+Designed by _Medical_ from Flaticon.
