@@ -126,6 +126,10 @@ describe("proxy", function () {
                 }]
             };
             jsonpatch.apply(obj2, patches);
+            
+            /* iOS and Android */
+            observedObj = JSONPatcherProxy.deepClone(observedObj);
+
             expect(obj2).toReallyEqual(observedObj);
         });
         it('should generate replace (escaped chars)', function () {
@@ -158,6 +162,10 @@ describe("proxy", function () {
             };
 
             jsonpatch.apply(obj2, patches);
+
+            /* iOS and Android */
+            observedObj = JSONPatcherProxy.deepClone(observedObj);
+
             expect(obj2).toReallyEqual(observedObj);
         });
 
@@ -227,6 +235,9 @@ describe("proxy", function () {
                 value: 'Warp'
             }]);
 
+            /* iOS and Android */
+            observedObj = JSONPatcherProxy.deepClone(observedObj);
+
             expect(observedObj).toReallyEqual({
                 firstName: "Marcin",
                 lastName: "Warp",
@@ -269,6 +280,9 @@ describe("proxy", function () {
                 path: '/phoneNumbers/1/number',
                 value: '456'
             }]);
+
+            /* iOS and Android */
+            observedObj = JSONPatcherProxy.deepClone(observedObj);
 
             expect(observedObj).toReallyEqual({
                 firstName: "Albert",
@@ -330,6 +344,10 @@ describe("proxy", function () {
             });
 
             var patches = jsonPatcherProxy.generate();
+            
+            /* iOS and Android */
+            patches = JSONPatcherProxy.deepClone(patches);
+            
             expect(patches).toReallyEqual([{
                 op: 'add',
                 path: '/1',
@@ -342,6 +360,7 @@ describe("proxy", function () {
             observedArr[0].id = 3;
 
             patches = jsonPatcherProxy.generate();
+            
             expect(patches).toReallyEqual([{
                 op: 'replace',
                 path: '/0/id',
@@ -825,6 +844,9 @@ describe("proxy", function () {
                 };
 
                 jsonpatch.apply(obj2, patches);
+
+                /* iOS and Android */
+                 observedObj = JSONPatcherProxy.deepClone(observedObj);
                 expect(obj2).toReallyEqual(observedObj);
             }
 
