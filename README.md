@@ -7,7 +7,7 @@
 
 > [ES6 proxy](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy) powered JSON Object observer. That emits JSON patches when changes occur to your object tree.
 
-[![Build Status](https://travis-ci.org/alshakero/JSONPatcherProxy.svg?branch=master)](https://travis-ci.org/Starcounter-Jack/JSON-Patch)
+[![Build Status](https://travis-ci.org/Palindrom/JSONPatcherProxy.svg?branch=master)](https://travis-ci.org/Palindrom/JSONPatcherProxy)
 
 With JSONPatcherProxy, you don't need polling or dirty checking. Any changes to the object are synchronously emitted.
 
