@@ -1,4 +1,4 @@
-# 🚀 JSONPatcherProxy
+# JSONPatcherProxy
 <p align="center">
   <img alt="JSONPatcherProxy" src="https://cloud.githubusercontent.com/assets/17054134/23507329/cef41e62-ff4c-11e6-8146-e95c8232e619.png">
 </p> 
