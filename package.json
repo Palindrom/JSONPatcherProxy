@@ -25,5 +25,8 @@
     "jsdom": "^9.11.0",
     "lodash": "^4.17.4",
     "webpack": "^2.2.1"
+  },
+  "dependencies": {
+    "fast-json-patch": "^1.1.8"
   }
 }

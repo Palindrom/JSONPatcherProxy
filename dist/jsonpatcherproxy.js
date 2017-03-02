@@ -86,8 +86,8 @@ var JSONPatcherProxy = (function() {
     this.isRecording = false;
     this.userCallback;
     var sender = this;
-
     /**
+     * @memberof JSONPatcherProxy
      * Disables patches omitting (to both callback and patches array). However, the object will be updated if you change it.
      */
     this.switchObserverOn = function() {
@@ -101,12 +101,16 @@ var JSONPatcherProxy = (function() {
       };
     };
     /**
+     * @memberof JSONPatcherProxy
      * Enables patches omitting (to both callback and patches array). Starting from the moment you call it. Any changes before that go unnoticed.
      */
     this.switchObserverOff = function() {
       sender.defaultCallback = function() {};
     };
   }
+  /**
+  * Deep clones your object and returns a new object.
+  */
   JSONPatcherProxy.deepClone = function(obj) {
     switch (typeof obj) {
       case "object":

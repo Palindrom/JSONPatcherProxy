@@ -1,5 +1,10 @@
-![image](https://cloud.githubusercontent.com/assets/17054134/23224348/4a96afbe-f92e-11e6-9a5d-43dd3dac3791.png)
-===============
+# JSONPatcherProxy
+<p align="center">
+  <img alt="JSONPatcherProxy" src="https://cloud.githubusercontent.com/assets/17054134/23507089/b0951b34-ff4b-11e6-967b-aa20da3dcd00.png">
+</p> 
+
+---
+
 > [ES6 proxy](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy) powered JSON Object observer. That emits JSON patches when changes occur to your object tree.
 
 [![Build Status](https://travis-ci.org/alshakero/JSONPatcherProxy.svg?branch=master)](https://travis-ci.org/Starcounter-Jack/JSON-Patch)
