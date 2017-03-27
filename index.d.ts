@@ -1,6 +1,6 @@
 /*!
  * https://github.com/PuppetJS/JSONPatcherProxy
- * JSONPatcherProxy version: 0.0.3
+ * JSONPatcherProxy version: 0.0.2
  * (c) 2017 Starcounter 
  * MIT license
  */
