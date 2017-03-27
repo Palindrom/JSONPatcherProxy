@@ -159,7 +159,7 @@ var JSONPatcherProxy = (function() {
         }
       }
     }
-    return this.generateProxyAtPath(root, "");
+    return this.generateProxyAtPath(root, path);
   };
   //this function is for aesthetic purposes
   JSONPatcherProxy.prototype.proxifyObjectTree = function(root) {

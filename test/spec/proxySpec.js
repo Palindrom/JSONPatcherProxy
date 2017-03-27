@@ -370,6 +370,7 @@ describe("proxy", function () {
             observedArr[1].id = 4;
 
             patches = jsonPatcherProxy.generate();
+            
             expect(patches).toReallyEqual([{
                 op: 'replace',
                 path: '/1/id',

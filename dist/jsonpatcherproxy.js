@@ -147,6 +147,7 @@ var JSONPatcherProxy = (function() {
           typeof receiver === "object" &&
           receiver._isProxified !== true
         ) {
+          console.log('omar', distPath)
           receiver = instance._proxifyObjectTreeRecursively(receiver, distPath);
         }
         if (typeof receiver === "undefined") {
@@ -232,7 +233,7 @@ var JSONPatcherProxy = (function() {
         }
       }
     }
-    return this.generateProxyAtPath(root, "");
+    return this.generateProxyAtPath(root, path);
   };
   //this function is for aesthetic purposes
   JSONPatcherProxy.prototype.proxifyObjectTree = function(root) {
