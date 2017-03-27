@@ -1,3 +1,10 @@
+/*!
+ * https://github.com/PuppetJS/JSONPatcherProxy
+ * JSONPatcherProxy version: 0.0.1
+ * (c) 2017 Starcounter 
+ * MIT license
+ */
+
 /** Class representing a JS Object observer  */
 declare class JSONPatcherProxy {
     /**
