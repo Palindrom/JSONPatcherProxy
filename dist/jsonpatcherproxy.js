@@ -73,8 +73,8 @@ module.exports =
 
 /*!
  * https://github.com/PuppetJS/JSONPatcherProxy
- * JSONPatcherProxy version: 0.0.1
- * (c) 2017 Starcounter and contributors
+ * JSONPatcherProxy version: 0.0.2
+ * (c) 2017 Starcounter 
  * MIT license
  */
 
@@ -147,7 +147,7 @@ var JSONPatcherProxy = (function() {
           typeof receiver === "object" &&
           receiver._isProxified !== true
         ) {
-          receiver = instance.generateProxyAtPath(receiver, distPath);
+          receiver = instance._proxifyObjectTreeRecursively(receiver, distPath);
         }
         if (typeof receiver === "undefined") {
           if (target.hasOwnProperty(key)) {
