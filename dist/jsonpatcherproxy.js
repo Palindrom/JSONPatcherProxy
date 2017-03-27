@@ -147,7 +147,6 @@ var JSONPatcherProxy = (function() {
           typeof receiver === "object" &&
           receiver._isProxified !== true
         ) {
-          console.log('omar', distPath)
           receiver = instance._proxifyObjectTreeRecursively(receiver, distPath);
         }
         if (typeof receiver === "undefined") {
