@@ -547,23 +547,6 @@ describe("proxy", function () {
             expect(patches.length).toReallyEqual(0);
         });
 
-        /*it('should not generate the same patch twice (move)', function() { //"move" is not implemented yet in jsonpatch.generate
-          var obj = { lastName: {str: "Einstein"} };
-          var jsonPatcherProxy = new JSONPatcherProxy(obj);             
-                var observedObj = jsonPatcherProxy.observe(true);
-
-          obj.lastName2 = obj.lastName;
-          delete obj.lastName;
-
-          var patches = jsonPatcherProxy.generate();
-          expect(patches).toReallyEqual([
-            { op: 'move', from: '/lastName', to: '/lastName2' }
-          ]);
-
-          var patches = jsonPatcherProxy.generate();
-          expect(patches).toReallyEqual([]);
-        });*/
-
         describe("undefined - JS to JSON projection", function () {
             it('when value is set to `undefined`, should generate remove (undefined is JSON.stringified to no value)', function () {
                 var obj = {
