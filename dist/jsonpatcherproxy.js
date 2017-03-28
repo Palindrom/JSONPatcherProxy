@@ -73,7 +73,7 @@ module.exports =
 
 /*!
  * https://github.com/PuppetJS/JSONPatcherProxy
- * JSONPatcherProxy version: 0.0.2
+ * JSONPatcherProxy version: 0.0.3
  * (c) 2017 Starcounter 
  * MIT license
  */
