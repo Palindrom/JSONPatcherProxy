@@ -2,7 +2,7 @@
   "name": "jsonpatcherproxy",
   "version": "0.0.3",
   "description": "Lean and mean Javascript implementation of the JSON-Patch standard (RFC 6902). Update JSON documents using delta patches.",
-  "main": "dist/jsonpatcherproxy.js",
+  "main": "src/jsonpatcherproxy.js",
   "typings": "index.d.ts",
   "scripts": {
     "bench": "node test/spec/proxyBenchmark.js",

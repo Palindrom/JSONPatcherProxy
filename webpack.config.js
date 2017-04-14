@@ -18,16 +18,5 @@ module.exports = [
         }
       })
     ]
-  },
-  {
-    entry: "./src/jsonpatcherproxy.js",
-    output: {
-      filename: "dist/jsonpatcherproxy.js",
-      library: "JSONPatcherProxy",
-      libraryTarget: "commonjs2"
-    },
-    resolve: {
-      extensions: [".js"]
-    }
   }
 ];
