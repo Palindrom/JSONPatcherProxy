@@ -8,7 +8,7 @@ if (typeof jsonpatch === 'undefined') {
     jsonpatch = require('fast-json-patch');
 }
 if (typeof JSONPatcherProxy === 'undefined') {
-    JSONPatcherProxy = require('../../dist/jsonpatcherproxy');
+    JSONPatcherProxy = require('../../src/jsonpatcherproxy');
 }
 
 if (typeof _ === 'undefined') {

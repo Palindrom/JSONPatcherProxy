@@ -8,6 +8,7 @@
 /** Class representing a JS Object observer  */
 var JSONPatcherProxy = (function() {
   function JSONPatcherProxy(root) {
+    this.proxifiedObjectsMap = [];
     this.originalObject = root;
     this.cachedProxy = null;
     this.isRecording = false;
@@ -57,7 +58,7 @@ var JSONPatcherProxy = (function() {
       return obj;
     }
     var instance = this;
-    var proxy = new Proxy(obj, {
+    var proxy = Proxy.revocable(obj, {
       get: function(target, propKey, receiver) {
         if (propKey.toString() === "_isProxified") {
           return true; //to distinguish proxies
@@ -143,7 +144,9 @@ var JSONPatcherProxy = (function() {
         return Reflect.deleteProperty(target, key);
       }
     });
-    return proxy;
+    /* keeping track of all the proxies to be able to revoke them later */
+    this.proxifiedObjectsMap.push(proxy);
+    return proxy.proxy;
   };
   //grab tree's leaves one by one, encapsulate them into a proxy and return
   JSONPatcherProxy.prototype._proxifyObjectTreeRecursively = function(
@@ -176,6 +179,17 @@ var JSONPatcherProxy = (function() {
     this.switchObserverOn();
     return proxifiedObject;
   };
+  /**
+   * De-proxifies (revokes) the proxy that was created either in #observe call or added in runtime.
+   * @param {Proxy} proxy - The target proxy object
+   */
+  JSONPatcherProxy.prototype.revokeProxy = function(proxy) {
+      this.proxifiedObjectsMap.forEach(function(el) {
+        if(el.proxy === proxy) {
+          el.revoke && el.revoke();
+        }
+      })
+  }
   /**
      * Proxifies the object that was passed in the constructor and returns a proxified mirror of it.
      * @param {Boolean} record - whether to record object changes to a later-retrievable patches array.
@@ -219,5 +233,7 @@ var JSONPatcherProxy = (function() {
   return JSONPatcherProxy;
 })();
 
-module.exports = JSONPatcherProxy;
-module.exports.default = JSONPatcherProxy;
+if(typeof module !== 'undefined') {
+  module.exports = JSONPatcherProxy;
+  module.exports.default = JSONPatcherProxy;
+}
