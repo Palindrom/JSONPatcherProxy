@@ -1,7 +1,7 @@
 # JSONPatcherProxy
 <p align="center">
   <img alt="JSONPatcherProxy" src="https://cloud.githubusercontent.com/assets/17054134/23507329/cef41e62-ff4c-11e6-8146-e95c8232e619.png">
-</p> 
+</p>
 
 ---
 
@@ -91,7 +91,7 @@ var observedObject = jsonPatcherProxy.observe(true, function(patch) {
 observedObject.firstName = "Albert";
 ```
 
-## API 
+## API
 
 ## Object observing
 
@@ -102,15 +102,15 @@ Returns `JSONPatcherProxy`.
 
 #### JSONPatcherProxy#observe(`record` Boolean, [`callback` Function]): Proxy
 
-Sets up a deep proxy observer on `root` that listens for changes in the tree. When changes are detected, the optional callback is called with the generated **single** patch as the parameter. 
+Sets up a deep proxy observer on `root` that listens for changes in the tree. When changes are detected, the optional callback is called with the generated **single** patch as the parameter.
 
 **record**: if set to `false`, all changes are will be pass through the callback and no history will be kept. If set to `true` patches history will be kept until you call `generate`, this will return **several** patches and deletes them from history.
 
 Returns  a `Proxy` mirror of your object.
 
-- Note 1: you must either set `record` to `true` or pass a callback. 
-- Note 2: you have to use the return value of this function as your object of interest. Changes to the original object will go unnoticed. 
-- Note 3: please make sure to call `JSONPatcherProxy#generate` often if you choose to record. Because the patches will accumulate if you don't. 
+- Note 1: you must either set `record` to `true` or pass a callback.
+- Note 2: you have to use the return value of this function as your object of interest. Changes to the original object will go unnoticed.
+- Note 3: please make sure to call `JSONPatcherProxy#generate` often if you choose to record. Because the patches will accumulate if you don't.
 - Note 4: the returned mirror object has a property `_isProxified` set to true, you can use this to tell an object and its mirror apart. Also if your `root` object or any deep object inside it has `_isProxified` property set to `true` it won't be proxified => will not emit patches.
 
 #### JSONPatcherProxy#generate () :  Array
@@ -125,12 +125,27 @@ Returns the final state of your object, unobserved.
 
 #### JSONPatcherProxy#switchCallbackOff () : void
 
-Disables patches omitting (to both callback and patches array). However, the object will be updated if you change it. 
+Disables patches omitting (to both callback and patches array). However, the object will be updated if you change it.
 
 #### JSONPatcherProxy#switchCallbackOn () : void
 
-Enables patches omitting (to both callback and patches array). Starting from the moment you call it. 
+Enables patches omitting (to both callback and patches array). Starting from the moment you call it.
 
+#### JSONPatcherProxy#revokeProxy (proxy: Proxy) : void
+
+De-proxifies (revokes) the proxy that was created either in #observe call or added in runtime. See [Notes] (Notes).
+
+#### JSONPatcherProxy#disableTrapsForProxy (proxy: Proxy) : void
+
+Turns the proxified object into a forward-proxy object; doesn't emit any patches anymore, like a normal object. See [Notes] (Notes).
+
+## Notes
+
+When you observe an object tree, it is recursively iterated and every `object` inside it is wrapped in a `Proxy` with several traps to intercept changes to the whole tree. And this means if you cache a sub-object and then dispose the original tree parent, the child sub-object will remain observed and will emit patches when modified. This is hardly a desired behavior. To overcome it, you can either revoke the child object rendering it non-readable and non-writable using `revokeProxy` method (see above). This is useful to prevent silent unexpected errors. Modifying and reading the object will throw a `TypeError`.
+
+If you want to continue using the object, but without emitting patches, you may use `disableTrapsForProxy`. This will turn the sub-object into a normal unobserved object proper for later usage.
+
+Or you can also just use `delete parentTree.child` after caching your child object. And this will automatically `unobserve` the child properly without any extra steps.
 
 ## `undefined`s (JS to JSON projection)
 
@@ -146,11 +161,11 @@ See the [ECMAScript spec](http://www.ecma-international.org/ecma-262/6.0/index.h
 
 #### In browser
 
-Go to `/test` 
+Go to `/test`
 
 In Node run:
 
-``` 
+```
 npm test
 ```
 

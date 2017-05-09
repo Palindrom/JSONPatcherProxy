@@ -204,7 +204,7 @@ var JSONPatcherProxy = (function() {
       if(proxyInstance) {
         delete proxyInstance.trapsInstance.set;
         delete proxyInstance.trapsInstance.get;
-        delete proxyInstance.trapsInstance.deleteProperty;        
+        delete proxyInstance.trapsInstance.deleteProperty;
       }
     }
   /**
