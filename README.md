@@ -180,7 +180,3 @@ npm test
 ## License
 
 MIT
-
-
-## Logo
-Designed by _Medical_ from Flaticon.
