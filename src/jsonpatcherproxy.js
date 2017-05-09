@@ -184,11 +184,17 @@ var JSONPatcherProxy = (function() {
    * @param {Proxy} proxy - The target proxy object
    */
   JSONPatcherProxy.prototype.revokeProxy = function(proxy) {
-      this.proxifiedObjectsMap.forEach(function(el) {
+      let deletedIndex;
+      this.proxifiedObjectsMap.forEach(function(el, index) {
         if(el.proxy === proxy) {
+          deletedIndex = index;
           el.revoke && el.revoke();
         }
       })
+      /* remove it from map */
+      if(deletedIndex) {
+        proxifiedObjectsMap.splice(deletedIndex, 1);
+      }
   }
   /**
      * Proxifies the object that was passed in the constructor and returns a proxified mirror of it.
