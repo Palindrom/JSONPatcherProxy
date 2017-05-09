@@ -436,6 +436,55 @@ describe("proxy", function () {
             jsonpatch.apply(obj2, patches);
             expect(obj2).toEqualInJson(observedObj);
         });
+        it('should generate remove and disable all traps', function () {
+            var obj = {
+                lastName: "Einstein",
+                firstName: "Albert",
+                phoneNumbers: [{
+                    number: "12345"
+                }, {
+                    number: "4234"
+                }]
+            };
+            var jsonPatcherProxy = new JSONPatcherProxy(obj);
+            var observedObj = jsonPatcherProxy.observe(true);
+            
+            var cachedPhoneNumber = observedObj.phoneNumbers[1];
+            delete observedObj.phoneNumbers[1];
+
+            var patches = jsonPatcherProxy.generate();
+
+            expect(patches.length).toEqual(1); // remove patch
+
+            /* modify child object */
+            cachedPhoneNumber.number = 123421;
+
+            var patches = jsonPatcherProxy.generate();
+
+             /* Should be zero */
+            expect(patches.length).toEqual(0);
+        });
+        it("Revoked objects shouldn't be writable", function () {
+            var obj = {
+                lastName: "Einstein",
+                firstName: "Albert",
+                phoneNumbers: [{
+                    number: "12345"
+                }, {
+                    number: "4234"
+                }]
+            };
+            var jsonPatcherProxy = new JSONPatcherProxy(obj);
+            var observedObj = jsonPatcherProxy.observe(true);
+
+            var cachedPhoneNumber = observedObj.phoneNumbers[1];
+
+            jsonpatch.apply(observedObj, [{op: 'remove', path: '/phoneNumbers/1'}]);
+
+            jsonPatcherProxy.revokeProxy(cachedPhoneNumber);      
+            
+            expect(() => cachedPhoneNumber.number = 11111).toThrow(new TypeError("Cannot perform 'set' on a proxy that has been revoked"));
+        });
 
         it('should generate remove (array indexes should be sorted descending)', function () {
             var obj = {

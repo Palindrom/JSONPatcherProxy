@@ -7,8 +7,95 @@
 
 /** Class representing a JS Object observer  */
 var JSONPatcherProxy = (function() {
+  var traps = {
+      get: function(target, propKey, receiver) {
+        if (propKey.toString() === "_isProxified") {
+          return true; //to distinguish proxies
+        }
+        return Reflect.get(target, propKey, receiver);
+      },
+      set: function(target, key, receiver) {
+        var distPath = this.path +
+          "/" +
+          JSONPatcherProxy.escapePathComponent(key.toString());
+        // if the new value is an object, make sure to watch it
+        if (
+          receiver /* because `null` is in object */ &&
+          typeof receiver === "object" &&
+          receiver._isProxified !== true
+        ) {
+          receiver = this.instance._proxifyObjectTreeRecursively(receiver, distPath);
+        }
+        if (typeof receiver === "undefined") {
+          if (target.hasOwnProperty(key)) {
+            // when array element is set to `undefined`, should generate replace to `null`
+            if (Array.isArray(target)) {
+              //undefined array elements are JSON.stringified to `null`
+              this.instance.defaultCallback({
+                op: "replace",
+                path: distPath,
+                value: null
+              });
+            } else {
+              this.instance.defaultCallback({ op: "remove", path: distPath });
+            }
+            return Reflect.set(target, key, receiver);
+          } else if (!Array.isArray(target)) {
+            return Reflect.set(target, key, receiver);
+          }
+        }
+        if (Array.isArray(target) && !Number.isInteger(+key.toString())) {
+          return Reflect.set(target, key, receiver);
+        }
+        if (target.hasOwnProperty(key)) {
+          if (typeof target[key] === "undefined") {
+            if (Array.isArray(target)) {
+              this.instance.defaultCallback({
+                op: "replace",
+                path: distPath,
+                value: receiver
+              });
+            } else {
+              this.instance.defaultCallback({
+                op: "add",
+                path: distPath,
+                value: receiver
+              });
+            }
+            return Reflect.set(target, key, receiver);
+          } else {
+            this.instance.defaultCallback({
+              op: "replace",
+              path: distPath,
+              value: receiver
+            });
+            return Reflect.set(target, key, receiver);
+          }
+        } else {
+          this.instance.defaultCallback({
+            op: "add",
+            path: distPath,
+            value: receiver
+          });
+          return Reflect.set(target, key, receiver);
+        }
+      },
+      deleteProperty: function(target, key) {
+        if (typeof target[key] !== "undefined") {
+          this.instance.defaultCallback({
+            op: "remove",
+            path: (
+              this.path + "/" + JSONPatcherProxy.escapePathComponent(key.toString())
+            )
+          });
+          this.instance.disableTrapsForProxy(target[key]);
+        }
+        // else {
+        return Reflect.deleteProperty(target, key);
+      }
+    };
   function JSONPatcherProxy(root) {
-    this.proxifiedObjectsMap = [];
+    this.proxifiedObjectsMap = new WeakMap();
     this.originalObject = root;
     this.cachedProxy = null;
     this.isRecording = false;
@@ -58,94 +145,12 @@ var JSONPatcherProxy = (function() {
       return obj;
     }
     var instance = this;
-    var proxy = Proxy.revocable(obj, {
-      get: function(target, propKey, receiver) {
-        if (propKey.toString() === "_isProxified") {
-          return true; //to distinguish proxies
-        }
-        return Reflect.get(target, propKey, receiver);
-      },
-      set: function(target, key, receiver) {
-        var distPath = path +
-          "/" +
-          JSONPatcherProxy.escapePathComponent(key.toString());
-        // if the new value is an object, make sure to watch it
-        if (
-          receiver /* because `null` is in object */ &&
-          typeof receiver === "object" &&
-          receiver._isProxified !== true
-        ) {
-          receiver = instance._proxifyObjectTreeRecursively(receiver, distPath);
-        }
-        if (typeof receiver === "undefined") {
-          if (target.hasOwnProperty(key)) {
-            // when array element is set to `undefined`, should generate replace to `null`
-            if (Array.isArray(target)) {
-              //undefined array elements are JSON.stringified to `null`
-              instance.defaultCallback({
-                op: "replace",
-                path: distPath,
-                value: null
-              });
-            } else {
-              instance.defaultCallback({ op: "remove", path: distPath });
-            }
-            return Reflect.set(target, key, receiver);
-          } else if (!Array.isArray(target)) {
-            return Reflect.set(target, key, receiver);
-          }
-        }
-        if (Array.isArray(target) && !Number.isInteger(+key.toString())) {
-          return Reflect.set(target, key, receiver);
-        }
-        if (target.hasOwnProperty(key)) {
-          if (typeof target[key] === "undefined") {
-            if (Array.isArray(target)) {
-              instance.defaultCallback({
-                op: "replace",
-                path: distPath,
-                value: receiver
-              });
-            } else {
-              instance.defaultCallback({
-                op: "add",
-                path: distPath,
-                value: receiver
-              });
-            }
-            return Reflect.set(target, key, receiver);
-          } else {
-            instance.defaultCallback({
-              op: "replace",
-              path: distPath,
-              value: receiver
-            });
-            return Reflect.set(target, key, receiver);
-          }
-        } else {
-          instance.defaultCallback({
-            op: "add",
-            path: distPath,
-            value: receiver
-          });
-          return Reflect.set(target, key, receiver);
-        }
-      },
-      deleteProperty: function(target, key) {
-        if (typeof target[key] !== "undefined") {
-          instance.defaultCallback({
-            op: "remove",
-            path: (
-              path + "/" + JSONPatcherProxy.escapePathComponent(key.toString())
-            )
-          });
-        }
-        // else {
-        return Reflect.deleteProperty(target, key);
-      }
-    });
+    var trapsInstance = Object.assign({}, traps, {path: path, instance: instance});
+    var proxy = Proxy.revocable(obj, trapsInstance);
+    // cache traps object to disable them later.
+    proxy.trapsInstance = trapsInstance;
     /* keeping track of all the proxies to be able to revoke them later */
-    this.proxifiedObjectsMap.push(proxy);
+    this.proxifiedObjectsMap.set(proxy.proxy, proxy);
     return proxy.proxy;
   };
   //grab tree's leaves one by one, encapsulate them into a proxy and return
@@ -184,18 +189,24 @@ var JSONPatcherProxy = (function() {
    * @param {Proxy} proxy - The target proxy object
    */
   JSONPatcherProxy.prototype.revokeProxy = function(proxy) {
-      let deletedIndex;
-      this.proxifiedObjectsMap.forEach(function(el, index) {
-        if(el.proxy === proxy) {
-          deletedIndex = index;
-          el.revoke && el.revoke();
-        }
-      })
-      /* remove it from map */
-      if(deletedIndex) {
-        proxifiedObjectsMap.splice(deletedIndex, 1);
+      var proxyInstance = this.proxifiedObjectsMap.get(proxy);
+      if(proxyInstance) {
+        proxyInstance.revoke();
+        this.proxifiedObjectsMap.delete(proxy);
       }
-  }
+    }
+    /**
+   * Turns the proxified object into a forward-proxy object; doesn't emit any patches anymore, like a normal object
+   * @param {Proxy} proxy - The target proxy object
+   */
+  JSONPatcherProxy.prototype.disableTrapsForProxy = function(proxy) {
+      var proxyInstance = this.proxifiedObjectsMap.get(proxy);
+      if(proxyInstance) {
+        delete proxyInstance.trapsInstance.set;
+        delete proxyInstance.trapsInstance.get;
+        delete proxyInstance.trapsInstance.deleteProperty;        
+      }
+    }
   /**
      * Proxifies the object that was passed in the constructor and returns a proxified mirror of it.
      * @param {Boolean} record - whether to record object changes to a later-retrievable patches array.
