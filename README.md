@@ -95,10 +95,15 @@ observedObject.firstName = "Albert";
 
 ## Object observing
 
-#### constructor: JSONPatcherProxy( `root` Object ):  JSONPatcherProxy
+#### constructor: JSONPatcherProxy( `root` Object, [`showDetachedWarning` Boolean = true] ):  JSONPatcherProxy
 
-Creates an instance of `JSONPatcherProxy` around your object of interest `root`, for later `observe`, `unobserve`, `switchCallbackOff`, `switchCallbackOn` calls.
+Creates an instance of `JSONPatcherProxy` around your object of interest `root`, for later `observe`, `unobserve`, `pause`, `resume` calls.
 Returns `JSONPatcherProxy`.
+
+`root`: The object tree you want to observe
+
+`showDetachedWarning`: Modifying a child object that is detached from the parent tree is not recommended, because the object will continue to be a Proxy. That's why JSONPatcherProxy warns when a detached proxy is accessed. You can set this to false to disable those warnings.
+
 
 #### JSONPatcherProxy#observe(`record` Boolean, [`callback` Function]): Proxy
 
@@ -119,33 +124,21 @@ It returns the changes of your object since the last time it's called. You have 
 
 If there are no pending changes in `root`, returns an empty array (length 0).
 
-#### JSONPatcherProxy#unobserve () : Object
-
-Returns the final state of your object, unobserved.
-
-#### JSONPatcherProxy#switchCallbackOff () : void
+#### JSONPatcherProxy#pause () : void
 
 Disables patches omitting (to both callback and patches array). However, the object will be updated if you change it.
 
-#### JSONPatcherProxy#switchCallbackOn () : void
+#### JSONPatcherProxy#resume () : void
 
 Enables patches omitting (to both callback and patches array). Starting from the moment you call it.
 
-#### JSONPatcherProxy#revokeProxy (proxy: Proxy) : void
+#### JSONPatcherProxy#revoke () : void
 
-De-proxifies (revokes) the proxy that was created either in #observe call or added in runtime. See [Notes] (Notes).
+De-proxifies (revokes) all the proxies that were created either in #observe call or by adding sub-objects to the tree in runtime.
 
-#### JSONPatcherProxy#disableTrapsForProxy (proxy: Proxy) : void
+#### JSONPatcherProxy#disableTraps () : void
 
-Turns the proxified object into a forward-proxy object; doesn't emit any patches anymore, like a normal object. See [Notes] (Notes).
-
-## Notes
-
-When you observe an object tree, it is recursively iterated and every `object` inside it is wrapped in a `Proxy` with several traps to intercept changes to the whole tree. And this means if you cache a sub-object and then dispose the original tree parent, the child sub-object will remain observed and will emit patches when modified. This is hardly a desired behavior. To overcome it, you can either revoke the child object rendering it non-readable and non-writable using `revokeProxy` method (see above). This is useful to prevent silent unexpected errors. Modifying and reading the object will throw a `TypeError`.
-
-If you want to continue using the object, but without emitting patches, you may use `disableTrapsForProxy`. This will turn the sub-object into a normal unobserved object proper for later usage.
-
-Or you can also just use `delete parentTree.child` after caching your child object. And this will automatically `unobserve` the child properly without any extra steps.
+Turns the proxified object into a forward-proxy object; doesn't emit any patches anymore, like a normal object..
 
 ## `undefined`s (JS to JSON projection)
 

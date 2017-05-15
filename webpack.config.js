@@ -10,13 +10,6 @@ module.exports = [
     },
     resolve: {
       extensions: [".js"]
-    },
-    plugins: [
-      new webpack.optimize.UglifyJsPlugin({
-        compress: {
-          warnings: false
-        }
-      })
-    ]
+    }
   }
 ];

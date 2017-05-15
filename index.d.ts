@@ -19,37 +19,46 @@ declare class JSONPatcherProxy {
     private defaultCallback;
     private userCallback: Function;
     /**
-    * Disables recording and/or callback firing when object modifications happen.
-    */
-    public switchObserverOff: Function;
+     * @memberof JSONPatcherProxy
+     * Replaces your callback with a noop function.
+     */
+    public pause: Function;
     /**
-    * Enables recording and/or callback firing when object modifications happen.
-    */
-    public switchObserverOn: Function;
+     * @memberof JSONPatcherProxy
+     * Restores callback back to the original one provided to `observe`.
+     */
+    public resume: Function;
+
     private static escapePathComponent(str);
     private generateProxyAtPath(obj, path);
     private _proxifyObjectTreeRecursively(root, path);
     private proxifyObjectTree(root);
     /**
-    * Creates an instance of JSONPatcherProxy around your object of interest, for later observe, unobserve, switchCallbackOff, switchCallbackOn calls. 
+    * Creates an instance of JSONPatcherProxy around your object of interest, for later observe, unobserve, pause, resume calls. 
     * @param {Object|Array} root - the object you want to wrap
+    * @param {Boolean} showDetachedWarning - whether to log a warning when a detached sub-object is modified. 
     * @returns {JSONPatcherProxy}
     * @constructor
     */
-    constructor(root: any);
+    constructor(root: any, showDetachedWarning: boolean = true);
     /**
      * Proxifies the object that was passed in the constructor and returns a proxified mirror of it.
      * @param {Boolean} record - whether to record object changes to a later-retrievable patches array.
      * @param {Function} [callback] - this will be synchronously called with every object change.
      */
-    public observe(record: any, callback: any): any;
+    /**
+     * Disables all proxies' traps, turning the observed object into a forward-proxy object, like a normal object that you can modify silently.
+     */
+    public disableTraps: Function;
+     /**
+     * Proxifies the object that was passed in the constructor and returns a proxified mirror of it.
+     * @param {Boolean} record - whether to record object changes to a later-retrievable patches array.
+     * @param {Function} [callback] - this will be synchronously called with every object change with a single `patch` as the only parameter.
+     */
+    public observe(record: Boolean, callback: Function): any;
     /**
      * If the observed is set to record, it will synchronously return all the patches and empties patches array.
      */
     public generate(): Object[];
-    /**
-     * Synchronously de-proxifies the last state of the object and returns it unobserved.
-     */
-    public unobserve(): any;
 }
 export default JSONPatcherProxy;

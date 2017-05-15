@@ -464,27 +464,6 @@ describe("proxy", function () {
              /* Should be zero */
             expect(patches.length).toEqual(0);
         });
-        it("Revoked objects shouldn't be writable", function () {
-            var obj = {
-                lastName: "Einstein",
-                firstName: "Albert",
-                phoneNumbers: [{
-                    number: "12345"
-                }, {
-                    number: "4234"
-                }]
-            };
-            var jsonPatcherProxy = new JSONPatcherProxy(obj);
-            var observedObj = jsonPatcherProxy.observe(true);
-
-            var cachedPhoneNumber = observedObj.phoneNumbers[1];
-
-            jsonpatch.apply(observedObj, [{op: 'remove', path: '/phoneNumbers/1'}]);
-
-            jsonPatcherProxy.revokeProxy(cachedPhoneNumber);      
-            
-            expect(() => cachedPhoneNumber.number = 11111).toThrow(new TypeError("Cannot perform 'set' on a proxy that has been revoked"));
-        });
 
         it('should generate remove (array indexes should be sorted descending)', function () {
             var obj = {
@@ -1042,167 +1021,280 @@ describe("proxy", function () {
             expect(res).toReallyEqual([]);
 
             // }, 100);
-        });
-
-        it('should unobserve then observe again', function () {
-            var called = 0;
-
-            var obj = {
-                firstName: "Albert",
-                lastName: "Einstein",
-                phoneNumbers: [{
-                    number: "12345"
-                }, {
-                    number: "45353"
-                }]
-            };
-
-            var jsonPatcherProxy = new JSONPatcherProxy(obj);
-            var observedObj = jsonPatcherProxy.observe(true, function (patches) {
-                called++;
-            });
-
-            observedObj.firstName = 'Malvin';
-
-            expect(called).toReallyEqual(1);
-            observedObj = jsonPatcherProxy.unobserve();
-            observedObj.firstName = 'Wilfred';
-             
-            expect(called).toReallyEqual(1);
-
-            var observedObj = jsonPatcherProxy.observe(true, function (patches) {
-                        called++;
-            });
-
-            observedObj.firstName = 'Megan';
-            expect(called).toReallyEqual(2);
-
-            // ugly migration from Jasmine 1.x to > 2.0            
-        });
-
-         it('shouldn\'t omit patches when unobserved', function () {
-            var called = 0;
-
-            var obj = {
-                firstName: "Albert",
-                lastName: "Einstein",
-                phoneNumbers: [{
-                    number: "12345"
-                }, {
-                    number: "45353"
-                }]
-            };
-
-            var jsonPatcherProxy = new JSONPatcherProxy(obj);
-            var observedObj = jsonPatcherProxy.observe(true, function (patches) {
-                called++;
-            });
-
-            observedObj.firstName = 'Malvin';            
-            expect(called).toReallyEqual(1);
-
-            observedObj.firstName = 'Ronaldo';       
-            expect(called).toReallyEqual(2);
-
-            jsonPatcherProxy.switchObserverOff();
-
-            observedObj.firstName = 'Messi';       
-            expect(called).toReallyEqual(2);
-        });
-
-        it('should omit patches when unobserved then observed', function () {
-            var called = 0;
-
-            var obj = {
-                firstName: "Albert",
-                lastName: "Einstein",
-                phoneNumbers: [{
-                    number: "12345"
-                }, {
-                    number: "45353"
-                }]
-            };
-
-            var jsonPatcherProxy = new JSONPatcherProxy(obj);
-            var observedObj = jsonPatcherProxy.observe(true, function (patches) {
-                called++;
-            });
-
-            observedObj.firstName = 'Malvin';            
-            expect(called).toReallyEqual(1);
-
-            observedObj.firstName = 'Ronaldo';       
-            expect(called).toReallyEqual(2);
-
-            jsonPatcherProxy.switchObserverOff();
-
-            observedObj.firstName = 'Messi';       
-            expect(called).toReallyEqual(2);
-
-            jsonPatcherProxy.switchObserverOn();
-
-            observedObj.firstName = 'Carlos';       
-            expect(called).toReallyEqual(3);
-        });
-        it('should unobserve then observe again (deep value)', function () {
-            var called = 0;
-
-            var obj = {
-                firstName: "Albert",
-                lastName: "Einstein",
-                phoneNumbers: [{
-                    number: "12345"
-                }, {
-                    number: "45353"
-                }]
-            };
-
-            var jsonPatcherProxy = new JSONPatcherProxy(obj);
-            var observedObj = jsonPatcherProxy.observe(true, function (patches) {
-                called++;
-            });
-
-            observedObj.phoneNumbers[1].number = '555';
-            expect(called).toReallyEqual(1);
-            observedObj = jsonPatcherProxy.unobserve();
-            observedObj.phoneNumbers[1].number = '556';             
-            expect(called).toReallyEqual(1);
-
-            var observedObj = jsonPatcherProxy.observe(true, function (patches) {
-                called++;
-            });
-            observedObj.phoneNumbers[1].number = '557';
-            expect(called).toReallyEqual(2);
         });        
-        it("should handle callbacks that call switchObserverOn() and switchObserverOff() internally", function () {
+    });
+    describe('unobserving', function () {
+        it('should unobserve then observe again', function () {
+                var called = 0;
 
-            //TODO: needs attention
-            var obj = {
-                foo: 'bar'
-            };
+                var obj = {
+                    firstName: "Albert",
+                    lastName: "Einstein",
+                    phoneNumbers: [{
+                        number: "12345"
+                    }, {
+                        number: "45353"
+                    }]
+                };
 
-            var count = 0;
-            var jsonPatcherProxy = new JSONPatcherProxy(obj);
-            var observedObj = jsonPatcherProxy.observe(true, function() {
-                count++;
-                jsonPatcherProxy.switchObserverOff();                
+                var jsonPatcherProxy = new JSONPatcherProxy(obj);
+                var observedObj = jsonPatcherProxy.observe(true, function (patches) {
+                    called++;
+                });
+
+                observedObj.firstName = 'Malvin';
+
+                expect(called).toReallyEqual(1);
+                observedObj = jsonPatcherProxy.unobserve();
+                observedObj.firstName = 'Wilfred';
+                
+                expect(called).toReallyEqual(1);
+
+                var observedObj = jsonPatcherProxy.observe(true, function (patches) {
+                            called++;
+                });
+
+                observedObj.firstName = 'Megan';
+                expect(called).toReallyEqual(2);
+
+                // ugly migration from Jasmine 1.x to > 2.0            
             });
-            
-            observedObj.foo = 'koko';
-            // should emit once and then stop emitting
 
-            observedObj.foo = 'momo';
+            it('shouldn\'t omit patches when unobserved', function () {
+                var called = 0;
 
-            observedObj.foo = 'lolo';
+                var obj = {
+                    firstName: "Albert",
+                    lastName: "Einstein",
+                    phoneNumbers: [{
+                        number: "12345"
+                    }, {
+                        number: "45353"
+                    }]
+                };
 
-            expect(count).toReallyEqual(1);
+                var jsonPatcherProxy = new JSONPatcherProxy(obj);
+                var observedObj = jsonPatcherProxy.observe(true, function (patches) {
+                    called++;
+                });
 
-            jsonPatcherProxy.switchObserverOn();
+                observedObj.firstName = 'Malvin';            
+                expect(called).toReallyEqual(1);
 
-            //Should emit again
-            observedObj.foo = 'fofo';
+                observedObj.firstName = 'Ronaldo';       
+                expect(called).toReallyEqual(2);
 
-            expect(count).toReallyEqual(2);
-        });
+                jsonPatcherProxy.pause();
+
+                observedObj.firstName = 'Messi';       
+                expect(called).toReallyEqual(2);
+            });
+
+            it('should omit patches when unobserved then observed', function () {
+                var called = 0;
+
+                var obj = {
+                    firstName: "Albert",
+                    lastName: "Einstein",
+                    phoneNumbers: [{
+                        number: "12345"
+                    }, {
+                        number: "45353"
+                    }]
+                };
+
+                var jsonPatcherProxy = new JSONPatcherProxy(obj);
+                var observedObj = jsonPatcherProxy.observe(true, function (patches) {
+                    called++;
+                });
+
+                observedObj.firstName = 'Malvin';            
+                expect(called).toReallyEqual(1);
+
+                observedObj.firstName = 'Ronaldo';       
+                expect(called).toReallyEqual(2);
+
+                jsonPatcherProxy.pause();
+
+                observedObj.firstName = 'Messi';       
+                expect(called).toReallyEqual(2);
+
+                jsonPatcherProxy.resume();
+
+                observedObj.firstName = 'Carlos';       
+                expect(called).toReallyEqual(3);
+            });
+            it('should unobserve then observe again (deep value)', function () {
+                var called = 0;
+
+                var obj = {
+                    firstName: "Albert",
+                    lastName: "Einstein",
+                    phoneNumbers: [{
+                        number: "12345"
+                    }, {
+                        number: "45353"
+                    }]
+                };
+
+                var jsonPatcherProxy = new JSONPatcherProxy(obj);
+                var observedObj = jsonPatcherProxy.observe(true, function (patches) {
+                    called++;
+                });
+
+                observedObj.phoneNumbers[1].number = '555';
+                expect(called).toReallyEqual(1);
+                observedObj = jsonPatcherProxy.unobserve();
+                observedObj.phoneNumbers[1].number = '556';
+                expect(called).toReallyEqual(1);
+
+                var observedObj = jsonPatcherProxy.observe(true, function (patches) {
+                    called++;
+                });
+                observedObj.phoneNumbers[1].number = '557';
+                expect(called).toReallyEqual(2);
+            });        
+            it("should handle callbacks that call resume() and pause() internally", function () {
+
+                var obj = {
+                    foo: 'bar'
+                };
+
+                var count = 0;
+                var jsonPatcherProxy = new JSONPatcherProxy(obj);
+                var observedObj = jsonPatcherProxy.observe(true, function() {
+                    count++;
+                    jsonPatcherProxy.pause();                
+                });
+                
+                observedObj.foo = 'koko';
+                // should emit once and then stop emitting
+
+                observedObj.foo = 'momo';
+
+                observedObj.foo = 'lolo';
+
+                expect(count).toReallyEqual(1);
+
+                jsonPatcherProxy.resume();
+
+                //Should emit again
+                observedObj.foo = 'fofo';
+
+                expect(count).toReallyEqual(2);
+            });
+            it("shouldn't emit patches after calling `disableTraps`", function () {
+
+                var obj = {
+                    foo: 'bar'
+                };
+
+                var count = 0;
+                var jsonPatcherProxy = new JSONPatcherProxy(obj);
+                var observedObj = jsonPatcherProxy.observe(true, function() {
+                    count++;
+                });
+                
+                observedObj.foo = 'koko';
+
+                expect(count).toReallyEqual(1);
+
+                jsonPatcherProxy.disableTraps();                
+
+                observedObj.foo = 'momo';
+
+                observedObj.foo = 'lolo';
+
+                expect(count).toReallyEqual(1);
+            });
+            it("should throw a warning if object is modified after `disableTraps`", function () {
+
+                var obj = {
+                    foo: 'bar'
+                };
+
+                var count = 0;
+                var jsonPatcherProxy = new JSONPatcherProxy(obj, true)
+                var observedObj = jsonPatcherProxy.observe(true, function() {
+                    count++;
+                });
+                
+                spyOn(console, 'warn');
+
+                observedObj.foo = 'koko';
+
+                expect(count).toReallyEqual(1);
+
+                jsonPatcherProxy.disableTraps();                
+
+                observedObj.foo = 'momo';
+
+                expect(count).toReallyEqual(1);
+                expect(console.warn).toHaveBeenCalled();
+            });
+            it("should throw a warning if object is modified after detached", function () {
+
+                var obj = {child: {name: 'omar'}}
+
+                var count = 0;
+                var jsonPatcherProxy = new JSONPatcherProxy(obj, true)
+                var observedObj = jsonPatcherProxy.observe(true, function() {
+                    count++;
+                });
+                
+                spyOn(console, 'warn');            
+
+                observedObj.child.name = 'Tomek';  
+
+                // change should emit a patch
+                expect(count).toReallyEqual(1);
+
+                //cache a sub-object
+                const childObjectCached = observedObj.child;
+
+                //detach it
+                delete observedObj.child;
+
+                // deletion patch
+                expect(count).toReallyEqual(2);
+                
+                childObjectCached.name = 'Marcin';
+
+                // shouldn't emit a patch
+                expect(count).toReallyEqual(2);
+
+                // but should warn about it
+                expect(console.warn).toHaveBeenCalled();
+            });
+            it("should throw an error if object is modified after revoked", function () {
+
+                var obj = {child: {name: 'omar'}}
+
+                var count = 0;
+                var jsonPatcherProxy = new JSONPatcherProxy(obj, true)
+                var observedObj = jsonPatcherProxy.observe(true, function() {
+                    count++;
+                });
+                
+                observedObj.child.name = 'Tomek';  
+
+                // change should emit a patch
+                expect(count).toReallyEqual(1);
+
+                //cache a sub-object
+                const childObjectCached = observedObj.child;
+
+                //detach it
+                delete observedObj.child;
+
+                //revoke the instance
+                jsonPatcherProxy.revoke();
+
+                // modifying root should throw
+                expect(() => observedObj.add = "added").toThrow();
+
+                // modifying detached sub-object should throw
+                expect(() => childObjectCached.add = "added").toThrow();
+            });
     });
 });
