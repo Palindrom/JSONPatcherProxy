@@ -6,9 +6,9 @@
  */
 
 /** Class representing a JS Object observer  */
-var JSONPatcherProxy = (function() {
+const JSONPatcherProxy = (function() {
 
-  var proxifiedObjectsMap = new Map();
+  const proxifiedObjectsMap = new Map();
   
     /**
     * Creates an instance of JSONPatcherProxy around your object of interest `root`. 
@@ -68,8 +68,8 @@ var JSONPatcherProxy = (function() {
     if (!obj) {
       return obj;
     }
-    var instance = this;
-    var traps = {
+    const instance = this;
+    const traps = {
       get: function(target, propKey, receiver) {
         if (propKey.toString() === "_isProxified") {
           return true; //to distinguish proxies
@@ -77,7 +77,7 @@ var JSONPatcherProxy = (function() {
         return Reflect.get(target, propKey, receiver);
       },
       set: function(target, key, receiver) {
-        var distPath = path +
+        const distPath = path +
           "/" +
           JSONPatcherProxy.escapePathComponent(key.toString());
         // if the new value is an object, make sure to watch it
@@ -159,7 +159,7 @@ var JSONPatcherProxy = (function() {
         return Reflect.deleteProperty(target, key);
       }
     };
-    var proxy = Proxy.revocable(obj, traps);
+    const proxy = Proxy.revocable(obj, traps);
     // cache traps object to disable them later.
     proxy.trapsInstance = traps;
     /* keeping track of all the proxies to be able to revoke them later */
@@ -171,10 +171,10 @@ var JSONPatcherProxy = (function() {
     root,
     path
   ) {
-    for (var key in root) {
+    for (let key in root) {
       if (root.hasOwnProperty(key)) {
         if (typeof root[key] === "object") {
-          var distPath = path + "/" + JSONPatcherProxy.escapePathComponent(key);
+          const distPath = path + "/" + JSONPatcherProxy.escapePathComponent(key);
           root[key] = this.generateProxyAtPath(root[key], distPath);
           this._proxifyObjectTreeRecursively(root[key], distPath);
         }
@@ -192,7 +192,7 @@ var JSONPatcherProxy = (function() {
         initial process;
         */
     this.pause();
-    var proxifiedObject = this._proxifyObjectTreeRecursively(root, "");
+    const proxifiedObject = this._proxifyObjectTreeRecursively(root, "");
     /* OK you can record now */
     this.resume();
     return proxifiedObject;
