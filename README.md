@@ -126,11 +126,11 @@ If there are no pending changes in `root`, returns an empty array (length 0).
 
 #### JSONPatcherProxy#pause () : void
 
-Disables patches omitting (to both callback and patches array). However, the object will be updated if you change it.
+Disables patches emitting (to both callback and patches array). However, the object will be updated if you change it.
 
 #### JSONPatcherProxy#resume () : void
 
-Enables patches omitting (to both callback and patches array). Starting from the moment you call it.
+Enables patches emitting (to both callback and patches array). Starting from the moment you call it.
 
 #### JSONPatcherProxy#revoke () : void
 

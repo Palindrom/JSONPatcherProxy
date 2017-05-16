@@ -9,96 +9,7 @@
 var JSONPatcherProxy = (function() {
 
   var proxifiedObjectsMap = new Map();
-  var traps = {
-      get: function(target, propKey, receiver) {
-        if (propKey.toString() === "_isProxified") {
-          return true; //to distinguish proxies
-        }
-        return Reflect.get(target, propKey, receiver);
-      },
-      set: function(target, key, receiver) {
-        var distPath = this.path +
-          "/" +
-          JSONPatcherProxy.escapePathComponent(key.toString());
-        // if the new value is an object, make sure to watch it
-        if (
-          receiver /* because `null` is in object */ &&
-          typeof receiver === "object" &&
-          receiver._isProxified !== true
-        ) {
-          receiver = this.instance._proxifyObjectTreeRecursively(receiver, distPath);
-        }
-        if (typeof receiver === "undefined") {
-          if (target.hasOwnProperty(key)) {
-            // when array element is set to `undefined`, should generate replace to `null`
-            if (Array.isArray(target)) {
-              //undefined array elements are JSON.stringified to `null`
-              this.instance.defaultCallback({
-                op: "replace",
-                path: distPath,
-                value: null
-              });
-            } else {
-              this.instance.defaultCallback({ op: "remove", path: distPath });
-            }
-            return Reflect.set(target, key, receiver);
-          } else if (!Array.isArray(target)) {
-            return Reflect.set(target, key, receiver);
-          }
-        }
-        if (Array.isArray(target) && !Number.isInteger(+key.toString())) {
-          return Reflect.set(target, key, receiver);
-        }
-        if (target.hasOwnProperty(key)) {
-          if (typeof target[key] === "undefined") {
-            if (Array.isArray(target)) {
-              this.instance.defaultCallback({
-                op: "replace",
-                path: distPath,
-                value: receiver
-              });
-            } else {
-              this.instance.defaultCallback({
-                op: "add",
-                path: distPath,
-                value: receiver
-              });
-            }
-            return Reflect.set(target, key, receiver);
-          } else {
-            this.instance.defaultCallback({
-              op: "replace",
-              path: distPath,
-              value: receiver
-            });
-            return Reflect.set(target, key, receiver);
-          }
-        } else {
-          this.instance.defaultCallback({
-            op: "add",
-            path: distPath,
-            value: receiver
-          });
-          return Reflect.set(target, key, receiver);
-        }
-      },
-      deleteProperty: function(target, key) {
-        if (typeof target[key] !== "undefined") {
-          this.instance.defaultCallback({
-            op: "remove",
-            path: (
-              this.path + "/" + JSONPatcherProxy.escapePathComponent(key.toString())
-            )
-          });
-          const proxyInstance = proxifiedObjectsMap.get(target[key])
-          if(proxyInstance) {
-            disableTrapsForProxy.call(this.instance, proxyInstance);
-          }
-        }
-        // else {
-        return Reflect.deleteProperty(target, key);
-      }
-    };
+  
     /**
     * Creates an instance of JSONPatcherProxy around your object of interest `root`. 
     * @param {Object|Array} root - the object you want to wrap
@@ -112,7 +23,7 @@ var JSONPatcherProxy = (function() {
     if(typeof showDetachedWarning !== 'boolean')  {
       showDetachedWarning = true;
     }
-    
+
     this.showDetachedWarning = showDetachedWarning;
     this.originalObject = root;
     this.cachedProxy = null;
@@ -158,10 +69,99 @@ var JSONPatcherProxy = (function() {
       return obj;
     }
     var instance = this;
-    var trapsInstance = Object.assign({}, traps, {path: path, instance: instance});
-    var proxy = Proxy.revocable(obj, trapsInstance);
+    var traps = {
+      get: function(target, propKey, receiver) {
+        if (propKey.toString() === "_isProxified") {
+          return true; //to distinguish proxies
+        }
+        return Reflect.get(target, propKey, receiver);
+      },
+      set: function(target, key, receiver) {
+        var distPath = path +
+          "/" +
+          JSONPatcherProxy.escapePathComponent(key.toString());
+        // if the new value is an object, make sure to watch it
+        if (
+          receiver /* because `null` is in object */ &&
+          typeof receiver === "object" &&
+          receiver._isProxified !== true
+        ) {
+          receiver = instance._proxifyObjectTreeRecursively(receiver, distPath);
+        }
+        if (typeof receiver === "undefined") {
+          if (target.hasOwnProperty(key)) {
+            // when array element is set to `undefined`, should generate replace to `null`
+            if (Array.isArray(target)) {
+              //undefined array elements are JSON.stringified to `null`
+              instance.defaultCallback({
+                op: "replace",
+                path: distPath,
+                value: null
+              });
+            } else {
+              instance.defaultCallback({ op: "remove", path: distPath });
+            }
+            return Reflect.set(target, key, receiver);
+          } else if (!Array.isArray(target)) {
+            return Reflect.set(target, key, receiver);
+          }
+        }
+        if (Array.isArray(target) && !Number.isInteger(+key.toString())) {
+          return Reflect.set(target, key, receiver);
+        }
+        if (target.hasOwnProperty(key)) {
+          if (typeof target[key] === "undefined") {
+            if (Array.isArray(target)) {
+              instance.defaultCallback({
+                op: "replace",
+                path: distPath,
+                value: receiver
+              });
+            } else {
+              instance.defaultCallback({
+                op: "add",
+                path: distPath,
+                value: receiver
+              });
+            }
+            return Reflect.set(target, key, receiver);
+          } else {
+            instance.defaultCallback({
+              op: "replace",
+              path: distPath,
+              value: receiver
+            });
+            return Reflect.set(target, key, receiver);
+          }
+        } else {
+          instance.defaultCallback({
+            op: "add",
+            path: distPath,
+            value: receiver
+          });
+          return Reflect.set(target, key, receiver);
+        }
+      },
+      deleteProperty: function(target, key) {
+        if (typeof target[key] !== "undefined") {
+          instance.defaultCallback({
+            op: "remove",
+            path: (
+               path + "/" + JSONPatcherProxy.escapePathComponent(key.toString())
+            )
+          });
+          const proxyInstance = proxifiedObjectsMap.get(target[key])
+          if(proxyInstance) {
+            disableTrapsForProxy.call(instance, proxyInstance);
+          }
+        }
+        // else {
+        return Reflect.deleteProperty(target, key);
+      }
+    };
+    var proxy = Proxy.revocable(obj, traps);
     // cache traps object to disable them later.
-    proxy.trapsInstance = trapsInstance;
+    proxy.trapsInstance = traps;
     /* keeping track of all the proxies to be able to revoke them later */
     proxifiedObjectsMap.set(proxy.proxy, proxy);
     return proxy.proxy;
