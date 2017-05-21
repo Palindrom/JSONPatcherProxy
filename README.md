@@ -138,7 +138,7 @@ De-proxifies (revokes) all the proxies that were created either in #observe call
 
 #### JSONPatcherProxy#disableTraps () : void
 
-Turns the proxified object into a forward-proxy object; doesn't emit any patches anymore, like a normal object..
+Turns the proxified object into a forward-proxy object; doesn't emit any patches anymore, like a normal object.
 
 ## `undefined`s (JS to JSON projection)
 

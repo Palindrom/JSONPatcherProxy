@@ -12,7 +12,7 @@ const JSONPatcherProxy = (function() {
   /**
     * Creates an instance of JSONPatcherProxy around your object of interest `root`. 
     * @param {Object|Array} root - the object you want to wrap
-    * @param {Boolean} showDetachedWarning - whether to log a warning when a detached sub-object is modified @see {@link https://github.com/Palindrom/JSONPatcherProxy#detached-objects} 
+    * @param {Boolean} [showDetachedWarning] - whether to log a warning when a detached sub-object is modified @see {@link https://github.com/Palindrom/JSONPatcherProxy#detached-objects} 
     * @returns {JSONPatcherProxy}
     * @constructor
     */
@@ -75,9 +75,8 @@ const JSONPatcherProxy = (function() {
         return Reflect.get(target, propKey, receiver);
       },
       set: function(target, key, receiver) {
-        const distPath = path +
-          '/' +
-          JSONPatcherProxy.escapePathComponent(key.toString());
+        const distPath =
+          path + '/' + JSONPatcherProxy.escapePathComponent(key.toString());
         // if the new value is an object, make sure to watch it
         if (
           receiver /* because `null` is in object */ &&
@@ -150,7 +149,7 @@ const JSONPatcherProxy = (function() {
           });
           const proxyInstance = proxifiedObjectsMap.get(target[key]);
           if (proxyInstance) {
-            disableTrapsForProxy.call(instance, proxyInstance);
+            instance.disableTrapsForProxy(proxyInstance);
           }
         }
         // else {
@@ -172,9 +171,8 @@ const JSONPatcherProxy = (function() {
     for (let key in root) {
       if (root.hasOwnProperty(key)) {
         if (typeof root[key] === 'object') {
-          const distPath = path +
-            '/' +
-            JSONPatcherProxy.escapePathComponent(key);
+          const distPath =
+            path + '/' + JSONPatcherProxy.escapePathComponent(key);
           root[key] = this.generateProxyAtPath(root[key], distPath);
           this._proxifyObjectTreeRecursively(root[key], distPath);
         }
@@ -201,9 +199,10 @@ const JSONPatcherProxy = (function() {
    * Turns a proxified object into a forward-proxy object; doesn't emit any patches anymore, like a normal object
    * @param {Proxy} proxy - The target proxy object
    */
-  function disableTrapsForProxy(proxyInstance) {
+  JSONPatcherProxy.prototype.disableTrapsForProxy = function(proxyInstance) {
     if (this.showDetachedWarning) {
-      const message = "You're accessing an object that is detached from the observedObject tree, see https://github.com/Palindrom/JSONPatcherProxy#detached-objects";
+      const message =
+        "You're accessing an object that is detached from the observedObject tree, see https://github.com/Palindrom/JSONPatcherProxy#detached-objects";
       proxyInstance.trapsInstance.get = (a, b, c) => {
         console.warn(message);
         return Reflect.get(a, b, c);
@@ -221,10 +220,10 @@ const JSONPatcherProxy = (function() {
       delete proxyInstance.trapsInstance.get;
       delete proxyInstance.trapsInstance.deleteProperty;
     }
-  }
+  };
   /**
-   * Proxifies the object that was passed in the constructor and returns a proxified mirror of it.
-   * @param {Boolean} record - whether to record object changes to a later-retrievable patches array.
+   * Proxifies the object that was passed in the constructor and returns a proxified mirror of it. Even though both parameters are options. You need to pass at least one of them.
+   * @param {Boolean} [record] - whether to record object changes to a later-retrievable patches array.
    * @param {Function} [callback] - this will be synchronously called with every object change with a single `patch` as the only parameter.
    */
   JSONPatcherProxy.prototype.observe = function(record, callback) {
@@ -263,16 +262,9 @@ const JSONPatcherProxy = (function() {
    * Disables all proxies' traps, turning the observed object into a forward-proxy object, like a normal object that you can modify silently.
    */
   JSONPatcherProxy.prototype.disableTraps = function() {
-    proxifiedObjectsMap.forEach(disableTrapsForProxy.bind(this));
+    proxifiedObjectsMap.forEach(this.disableTrapsForProxy, this);
   };
-  /**
-   * Synchronously returns a snapshot of current object state
-   * @deprecated
-   */
-  JSONPatcherProxy.prototype.unobserve = function() {
-    //return a normal, non-proxified object
-    return JSONPatcherProxy.deepClone(this.cachedProxy);
-  };
+
   return JSONPatcherProxy;
 })();
 
