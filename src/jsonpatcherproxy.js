@@ -264,7 +264,6 @@ const JSONPatcherProxy = (function() {
   JSONPatcherProxy.prototype.disableTraps = function() {
     proxifiedObjectsMap.forEach(this.disableTrapsForProxy, this);
   };
-
   return JSONPatcherProxy;
 })();
 

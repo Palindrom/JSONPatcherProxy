@@ -1261,7 +1261,7 @@ describe('proxy', function() {
   });
 
   describe('pausing and resuming', function() {
-    it("shouldn't omit patches when paused", function() {
+    it("shouldn't emit patches when paused", function() {
       var called = 0;
 
       var obj = {
@@ -1294,7 +1294,7 @@ describe('proxy', function() {
       expect(called).toReallyEqual(2);
     });
 
-    it('should omit patches when paused then resumed', function() {
+    it('Should re-start emitting patches when paused then resumed', function() {
       var called = 0;
 
       var obj = {
