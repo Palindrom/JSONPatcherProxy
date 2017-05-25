@@ -1,7 +1,7 @@
 # JSONPatcherProxy
 <p align="center">
   <img alt="JSONPatcherProxy" src="https://cloud.githubusercontent.com/assets/17054134/23507329/cef41e62-ff4c-11e6-8146-e95c8232e619.png">
-</p> 
+</p>
 
 ---
 
@@ -91,26 +91,31 @@ var observedObject = jsonPatcherProxy.observe(true, function(patch) {
 observedObject.firstName = "Albert";
 ```
 
-## API 
+## API
 
 ## Object observing
 
-#### constructor: JSONPatcherProxy( `root` Object ):  JSONPatcherProxy
+#### constructor: JSONPatcherProxy( `root` Object, [`showDetachedWarning` Boolean = true] ):  JSONPatcherProxy
 
-Creates an instance of `JSONPatcherProxy` around your object of interest `root`, for later `observe`, `unobserve`, `switchCallbackOff`, `switchCallbackOn` calls.
+Creates an instance of `JSONPatcherProxy` around your object of interest `root`, for later `observe`, `unobserve`, `pause`, `resume` calls.
 Returns `JSONPatcherProxy`.
+
+`root`: The object tree you want to observe
+
+`showDetachedWarning`: Modifying a child object that is detached from the parent tree is not recommended, because the object will continue to be a Proxy. That's why JSONPatcherProxy warns when a detached proxy is accessed. You can set this to false to disable those warnings.
+
 
 #### JSONPatcherProxy#observe(`record` Boolean, [`callback` Function]): Proxy
 
-Sets up a deep proxy observer on `root` that listens for changes in the tree. When changes are detected, the optional callback is called with the generated **single** patch as the parameter. 
+Sets up a deep proxy observer on `root` that listens for changes in the tree. When changes are detected, the optional callback is called with the generated **single** patch as the parameter.
 
 **record**: if set to `false`, all changes are will be pass through the callback and no history will be kept. If set to `true` patches history will be kept until you call `generate`, this will return **several** patches and deletes them from history.
 
 Returns  a `Proxy` mirror of your object.
 
-- Note 1: you must either set `record` to `true` or pass a callback. 
-- Note 2: you have to use the return value of this function as your object of interest. Changes to the original object will go unnoticed. 
-- Note 3: please make sure to call `JSONPatcherProxy#generate` often if you choose to record. Because the patches will accumulate if you don't. 
+- Note 1: you must either set `record` to `true` or pass a callback.
+- Note 2: you have to use the return value of this function as your object of interest. Changes to the original object will go unnoticed.
+- Note 3: please make sure to call `JSONPatcherProxy#generate` often if you choose to record. Because the patches will accumulate if you don't.
 - Note 4: the returned mirror object has a property `_isProxified` set to true, you can use this to tell an object and its mirror apart. Also if your `root` object or any deep object inside it has `_isProxified` property set to `true` it won't be proxified => will not emit patches.
 
 #### JSONPatcherProxy#generate () :  Array
@@ -119,18 +124,21 @@ It returns the changes of your object since the last time it's called. You have 
 
 If there are no pending changes in `root`, returns an empty array (length 0).
 
-#### JSONPatcherProxy#unobserve () : Object
+#### JSONPatcherProxy#pause () : void
 
-Returns the final state of your object, unobserved.
+Disables patches emitting (to both callback and patches array). However, the object will be updated if you change it.
 
-#### JSONPatcherProxy#switchCallbackOff () : void
+#### JSONPatcherProxy#resume () : void
 
-Disables patches omitting (to both callback and patches array). However, the object will be updated if you change it. 
+Enables patches emitting (to both callback and patches array). Starting from the moment you call it.
 
-#### JSONPatcherProxy#switchCallbackOn () : void
+#### JSONPatcherProxy#revoke () : void
 
-Enables patches omitting (to both callback and patches array). Starting from the moment you call it. 
+De-proxifies (revokes) all the proxies that were created either in #observe call or by adding sub-objects to the tree in runtime.
 
+#### JSONPatcherProxy#disableTraps () : void
+
+Turns the proxified object into a forward-proxy object; doesn't emit any patches anymore, like a normal object.
 
 ## `undefined`s (JS to JSON projection)
 
@@ -146,11 +154,11 @@ See the [ECMAScript spec](http://www.ecma-international.org/ecma-262/6.0/index.h
 
 #### In browser
 
-Go to `/test` 
+Go to `/test`
 
 In Node run:
 
-``` 
+```
 npm test
 ```
 

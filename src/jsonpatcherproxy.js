@@ -6,33 +6,43 @@
  */
 
 /** Class representing a JS Object observer  */
-var JSONPatcherProxy = (function() {
-  function JSONPatcherProxy(root) {
+const JSONPatcherProxy = (function() {
+  const proxifiedObjectsMap = new Map();
+
+  /**
+    * Creates an instance of JSONPatcherProxy around your object of interest `root`. 
+    * @param {Object|Array} root - the object you want to wrap
+    * @param {Boolean} [showDetachedWarning] - whether to log a warning when a detached sub-object is modified @see {@link https://github.com/Palindrom/JSONPatcherProxy#detached-objects} 
+    * @returns {JSONPatcherProxy}
+    * @constructor
+    */
+  function JSONPatcherProxy(root, showDetachedWarning) {
+    // default to true
+    if (typeof showDetachedWarning !== 'boolean') {
+      showDetachedWarning = true;
+    }
+
+    this.showDetachedWarning = showDetachedWarning;
     this.originalObject = root;
     this.cachedProxy = null;
     this.isRecording = false;
     this.userCallback;
-    var sender = this;
     /**
      * @memberof JSONPatcherProxy
-     * Disables patches omitting (to both callback and patches array). However, the object will be updated if you change it.
+     * Restores callback back to the original one provided to `observe`.
      */
-    this.switchObserverOn = function() {
-      sender.defaultCallback = function(event) {
-        if (sender.isRecording) {
-          sender.patches.push(event);
-        }
-        if (sender.userCallback) {
-          sender.userCallback(event);
-        }
+    this.resume = () => {
+      this.defaultCallback = operation => {
+        this.isRecording && this.patches.push(operation);
+        this.userCallback && this.userCallback(operation);
       };
     };
     /**
      * @memberof JSONPatcherProxy
-     * Enables patches omitting (to both callback and patches array). Starting from the moment you call it. Any changes before that go unnoticed.
+     * Replaces your callback with a noop function.
      */
-    this.switchObserverOff = function() {
-      sender.defaultCallback = function() {};
+    this.pause = () => {
+      this.defaultCallback = function() {};
     };
   }
   /**
@@ -40,54 +50,53 @@ var JSONPatcherProxy = (function() {
   */
   JSONPatcherProxy.deepClone = function(obj) {
     switch (typeof obj) {
-      case "object":
+      case 'object':
         return JSON.parse(JSON.stringify(obj)); //Faster than ES5 clone - http://jsperf.com/deep-cloning-of-objects/5
-      case "undefined":
+      case 'undefined':
         return null; //this is how JSON.stringify behaves for array items
       default:
         return obj; //no need to clone primitives
     }
   };
   JSONPatcherProxy.escapePathComponent = function(str) {
-    if (str.indexOf("/") === -1 && str.indexOf("~") === -1) return str;
-    return str.replace(/~/g, "~0").replace(/\//g, "~1");
+    if (str.indexOf('/') === -1 && str.indexOf('~') === -1) return str;
+    return str.replace(/~/g, '~0').replace(/\//g, '~1');
   };
   JSONPatcherProxy.prototype.generateProxyAtPath = function(obj, path) {
     if (!obj) {
       return obj;
     }
-    var instance = this;
-    var proxy = new Proxy(obj, {
+    const instance = this;
+    const traps = {
       get: function(target, propKey, receiver) {
-        if (propKey.toString() === "_isProxified") {
+        if (propKey.toString() === '_isProxified') {
           return true; //to distinguish proxies
         }
         return Reflect.get(target, propKey, receiver);
       },
       set: function(target, key, receiver) {
-        var distPath = path +
-          "/" +
-          JSONPatcherProxy.escapePathComponent(key.toString());
+        const distPath =
+          path + '/' + JSONPatcherProxy.escapePathComponent(key.toString());
         // if the new value is an object, make sure to watch it
         if (
           receiver /* because `null` is in object */ &&
-          typeof receiver === "object" &&
+          typeof receiver === 'object' &&
           receiver._isProxified !== true
         ) {
           receiver = instance._proxifyObjectTreeRecursively(receiver, distPath);
         }
-        if (typeof receiver === "undefined") {
+        if (typeof receiver === 'undefined') {
           if (target.hasOwnProperty(key)) {
             // when array element is set to `undefined`, should generate replace to `null`
             if (Array.isArray(target)) {
               //undefined array elements are JSON.stringified to `null`
               instance.defaultCallback({
-                op: "replace",
+                op: 'replace',
                 path: distPath,
                 value: null
               });
             } else {
-              instance.defaultCallback({ op: "remove", path: distPath });
+              instance.defaultCallback({ op: 'remove', path: distPath });
             }
             return Reflect.set(target, key, receiver);
           } else if (!Array.isArray(target)) {
@@ -98,16 +107,16 @@ var JSONPatcherProxy = (function() {
           return Reflect.set(target, key, receiver);
         }
         if (target.hasOwnProperty(key)) {
-          if (typeof target[key] === "undefined") {
+          if (typeof target[key] === 'undefined') {
             if (Array.isArray(target)) {
               instance.defaultCallback({
-                op: "replace",
+                op: 'replace',
                 path: distPath,
                 value: receiver
               });
             } else {
               instance.defaultCallback({
-                op: "add",
+                op: 'add',
                 path: distPath,
                 value: receiver
               });
@@ -115,7 +124,7 @@ var JSONPatcherProxy = (function() {
             return Reflect.set(target, key, receiver);
           } else {
             instance.defaultCallback({
-              op: "replace",
+              op: 'replace',
               path: distPath,
               value: receiver
             });
@@ -123,7 +132,7 @@ var JSONPatcherProxy = (function() {
           }
         } else {
           instance.defaultCallback({
-            op: "add",
+            op: 'add',
             path: distPath,
             value: receiver
           });
@@ -131,29 +140,39 @@ var JSONPatcherProxy = (function() {
         }
       },
       deleteProperty: function(target, key) {
-        if (typeof target[key] !== "undefined") {
+        if (typeof target[key] !== 'undefined') {
           instance.defaultCallback({
-            op: "remove",
-            path: (
-              path + "/" + JSONPatcherProxy.escapePathComponent(key.toString())
-            )
+            op: 'remove',
+            path: path +
+              '/' +
+              JSONPatcherProxy.escapePathComponent(key.toString())
           });
+          const proxyInstance = proxifiedObjectsMap.get(target[key]);
+          if (proxyInstance) {
+            instance.disableTrapsForProxy(proxyInstance);
+          }
         }
         // else {
         return Reflect.deleteProperty(target, key);
       }
-    });
-    return proxy;
+    };
+    const proxy = Proxy.revocable(obj, traps);
+    // cache traps object to disable them later.
+    proxy.trapsInstance = traps;
+    /* keeping track of all the proxies to be able to revoke them later */
+    proxifiedObjectsMap.set(proxy.proxy, proxy);
+    return proxy.proxy;
   };
   //grab tree's leaves one by one, encapsulate them into a proxy and return
   JSONPatcherProxy.prototype._proxifyObjectTreeRecursively = function(
     root,
     path
   ) {
-    for (var key in root) {
+    for (let key in root) {
       if (root.hasOwnProperty(key)) {
-        if (typeof root[key] === "object") {
-          var distPath = path + "/" + JSONPatcherProxy.escapePathComponent(key);
+        if (typeof root[key] === 'object') {
+          const distPath =
+            path + '/' + JSONPatcherProxy.escapePathComponent(key);
           root[key] = this.generateProxyAtPath(root[key], distPath);
           this._proxifyObjectTreeRecursively(root[key], distPath);
         }
@@ -170,22 +189,46 @@ var JSONPatcherProxy = (function() {
         that's why we disable recording through this
         initial process;
         */
-    this.switchObserverOff();
-    var proxifiedObject = this._proxifyObjectTreeRecursively(root, "");
+    this.pause();
+    const proxifiedObject = this._proxifyObjectTreeRecursively(root, '');
     /* OK you can record now */
-    this.switchObserverOn();
+    this.resume();
     return proxifiedObject;
   };
   /**
-     * Proxifies the object that was passed in the constructor and returns a proxified mirror of it.
-     * @param {Boolean} record - whether to record object changes to a later-retrievable patches array.
-     * @param {Function} [callback] - this will be synchronously called with every object change with a single `patch` as the only parameter.
-     */
+   * Turns a proxified object into a forward-proxy object; doesn't emit any patches anymore, like a normal object
+   * @param {Proxy} proxy - The target proxy object
+   */
+  JSONPatcherProxy.prototype.disableTrapsForProxy = function(proxyInstance) {
+    if (this.showDetachedWarning) {
+      const message =
+        "You're accessing an object that is detached from the observedObject tree, see https://github.com/Palindrom/JSONPatcherProxy#detached-objects";
+      proxyInstance.trapsInstance.get = (a, b, c) => {
+        console.warn(message);
+        return Reflect.get(a, b, c);
+      };
+      proxyInstance.trapsInstance.set = (a, b, c) => {
+        console.warn(message);
+        return Reflect.set(a, b, c);
+      };
+      proxyInstance.trapsInstance.deleteProperty = (a, b, c) => {
+        console.warn(message);
+        return Reflect.deleteProperty(a, b, c);
+      };
+    } else {
+      delete proxyInstance.trapsInstance.set;
+      delete proxyInstance.trapsInstance.get;
+      delete proxyInstance.trapsInstance.deleteProperty;
+    }
+  };
+  /**
+   * Proxifies the object that was passed in the constructor and returns a proxified mirror of it. Even though both parameters are options. You need to pass at least one of them.
+   * @param {Boolean} [record] - whether to record object changes to a later-retrievable patches array.
+   * @param {Function} [callback] - this will be synchronously called with every object change with a single `patch` as the only parameter.
+   */
   JSONPatcherProxy.prototype.observe = function(record, callback) {
     if (!record && !callback) {
-      throw new Error(
-        "You need to either record changes or pass a callback"
-      );
+      throw new Error('You need to either record changes or pass a callback');
     }
     this.isRecording = record;
     if (callback) this.userCallback = callback;
@@ -196,28 +239,35 @@ var JSONPatcherProxy = (function() {
     They might need to use only a callback.
     */
     if (record) this.patches = [];
-    return this.cachedProxy = this.proxifyObjectTree(
+    return (this.cachedProxy = this.proxifyObjectTree(
       JSONPatcherProxy.deepClone(this.originalObject)
-    );
+    ));
   };
   /**
-     * If the observed is set to record, it will synchronously return all the patches and empties patches array.
-     */
+   * If the observed is set to record, it will synchronously return all the patches and empties patches array.
+   */
   JSONPatcherProxy.prototype.generate = function() {
     if (!this.isRecording) {
-      throw new Error("You should set record to true to get patches later");
+      throw new Error('You should set record to true to get patches later');
     }
     return this.patches.splice(0, this.patches.length);
   };
   /**
-     * Synchronously de-proxifies the last state of the object and returns it unobserved.
-     */
-  JSONPatcherProxy.prototype.unobserve = function() {
-    //return a normal, non-proxified object
-    return JSONPatcherProxy.deepClone(this.cachedProxy);
+   * Revokes all proxies rendering the observed object useless and good for garbage collection @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy/revocable}
+   */
+  JSONPatcherProxy.prototype.revoke = function() {
+    proxifiedObjectsMap.forEach(el => el.revoke());
+  };
+  /**
+   * Disables all proxies' traps, turning the observed object into a forward-proxy object, like a normal object that you can modify silently.
+   */
+  JSONPatcherProxy.prototype.disableTraps = function() {
+    proxifiedObjectsMap.forEach(this.disableTrapsForProxy, this);
   };
   return JSONPatcherProxy;
 })();
 
-module.exports = JSONPatcherProxy;
-module.exports.default = JSONPatcherProxy;
+if (typeof module !== 'undefined') {
+  module.exports = JSONPatcherProxy;
+  module.exports.default = JSONPatcherProxy;
+}
