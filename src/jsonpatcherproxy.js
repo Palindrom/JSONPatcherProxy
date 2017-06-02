@@ -1,3 +1,5 @@
+"use strict;" 
+
 /*!
  * https://github.com/PuppetJS/JSONPatcherProxy
  * JSONPatcherProxy version: 0.0.5
@@ -6,9 +8,8 @@
  */
 
 /** Class representing a JS Object observer  */
-const JSONPatcherProxy = (function() {
+var JSONPatcherProxy = (function() {
   const proxifiedObjectsMap = new Map();
-
   /**
     * Creates an instance of JSONPatcherProxy around your object of interest `root`. 
     * @param {Object|Array} root - the object you want to wrap
