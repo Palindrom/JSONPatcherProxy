@@ -1,11 +1,11 @@
 # JSONPatcherProxy
 <p align="center">
-  <img alt="JSONPatcherProxy" src="https://cloud.githubusercontent.com/assets/17054134/23507329/cef41e62-ff4c-11e6-8146-e95c8232e619.png">
+  <img alt="JSONPatcherProxy" src="https://user-images.githubusercontent.com/17054134/28315402-86a59eae-6bbe-11e7-82e9-45bacd7f8cc1.png">
 </p>
 
 ---
 
-> [ES6 proxy](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy) powered JSON Object observer. That emits JSON patches when changes occur to your object tree.
+> [ES6 proxy](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy) powered JSON Object observer that emits JSON patches when changes occur to your object tree.
 
 [![Build Status](https://travis-ci.org/Palindrom/JSONPatcherProxy.svg?branch=master)](https://travis-ci.org/Palindrom/JSONPatcherProxy)
 
