@@ -28,6 +28,6 @@
     "webpack": "^2.5.1"
   },
   "dependencies": {
-    "fast-json-patch": "^1.1.8"
+    "fast-json-patch": "^2.0.0"
   }
 }

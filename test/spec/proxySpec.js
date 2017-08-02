@@ -1,9 +1,3 @@
-if (typeof window === 'undefined') {
-  var jsdom = require('jsdom').jsdom;
-  var doc = jsdom(undefined, undefined);
-  global.window = doc.defaultView;
-  global.document = doc.defaultView.document;
-}
 if (typeof jsonpatch === 'undefined') {
   jsonpatch = require('fast-json-patch');
 }
@@ -128,7 +122,7 @@ describe('proxy', function() {
           }
         ]
       };
-      jsonpatch.apply(obj2, patches);
+      jsonpatch.applyPatch(obj2, patches);
 
       /* iOS and Android */
       observedObj = JSONPatcherProxy.deepClone(observedObj);
@@ -170,7 +164,7 @@ describe('proxy', function() {
         ]
       };
 
-      jsonpatch.apply(obj2, patches);
+      jsonpatch.applyPatch(obj2, patches);
 
       /* iOS and Android */
       observedObj = JSONPatcherProxy.deepClone(observedObj);
@@ -452,7 +446,7 @@ describe('proxy', function() {
         ]
       };
 
-      jsonpatch.apply(obj2, patches);
+      jsonpatch.applyPatch(obj2, patches);
       expect(obj2).toEqualInJson(observedObj);
     });
     it('should generate remove', function() {
@@ -489,7 +483,7 @@ describe('proxy', function() {
           }
         ]
       };
-      jsonpatch.apply(obj2, patches);
+      jsonpatch.applyPatch(obj2, patches);
       expect(obj2).toEqualInJson(observedObj);
     });
     it('should generate remove and disable all traps', function() {
@@ -551,7 +545,7 @@ describe('proxy', function() {
       var obj2 = {
         items: ['a', 'b', 'c']
       };
-      jsonpatch.apply(obj2, patches);
+      jsonpatch.applyPatch(obj2, patches);
       expect(observedObj).toEqualInJson(obj2);
     });
 
@@ -902,7 +896,7 @@ describe('proxy', function() {
         }
       ];
 
-      jsonpatch.apply(obj, patches);
+      jsonpatch.applyPatch(obj, patches);
       expect(obj).toReallyEqual({
         foo: ['bar', ['abc', 'def']]
       });
@@ -957,7 +951,7 @@ describe('proxy', function() {
           ]
         };
 
-        jsonpatch.apply(obj2, patches);
+        jsonpatch.applyPatch(obj2, patches);
 
         /* iOS and Android */
         observedObj = JSONPatcherProxy.deepClone(observedObj);
@@ -966,7 +960,8 @@ describe('proxy', function() {
     });
 
     it('should generate replace (double change, shallow object)', function() {
-      var lastPatches, called = 0;
+      var lastPatches,
+        called = 0;
 
       var obj = {
         firstName: 'Albert',
@@ -1032,7 +1027,8 @@ describe('proxy', function() {
     });
 
     it('should generate replace (double change, deep object)', function() {
-      var lastPatches, called = 0;
+      var lastPatches,
+        called = 0;
 
       // ugly migration from Jasmine 1.x to > 2.0
       function patchesChanged(time) {
@@ -1098,7 +1094,9 @@ describe('proxy', function() {
     });
 
     it('generate should execute callback synchronously', function() {
-      var lastPatches, called = 0, res;
+      var lastPatches,
+        called = 0,
+        res;
 
       var obj = {
         firstName: 'Albert',
@@ -1148,6 +1146,86 @@ describe('proxy', function() {
       // }, 100);
     });
   });
+  describe('Already proxified values', function() {
+    it("shouldn't re-proxify (it should deep clone) proxified values from different instances", function() {
+
+      var obj = {
+        one: [1, 2, 3, 4, 5],
+        two: [6, 7, 6, 5, 4]
+      };
+
+      var countOne = 0;
+      var observedObjOne = new JSONPatcherProxy(obj).observe(true, function() {
+        countOne++;
+      });
+
+      var countTwo = 0;
+      var observedObjTwo = new JSONPatcherProxy(obj).observe(true, function() {
+        countTwo++;
+      });
+
+      //control test, to make sure tests are correct
+      expect(countOne).toReallyEqual(0);
+      observedObjOne.one[0] = 100;
+      expect(countOne).toReallyEqual(1);
+
+      // isolate the proxified array
+      var observedArray = observedObjOne.one;
+
+      // change the proxified array
+      observedArray[1] = 200;
+
+      // expect a patch
+      expect(countOne).toReallyEqual(2);
+
+      // make sure second observer never went off
+      expect(countTwo).toReallyEqual(0);
+
+      // add an already proxified array 
+      observedObjTwo.three = observedArray;
+
+      // expect a patch from second observer (add /three)
+      expect(countTwo).toReallyEqual(1);
+
+      //change the array in second observer
+      observedObjTwo.three[2] = 100;
+
+      // expect a patch from second observer (replace /three/2/)
+      expect(countTwo).toReallyEqual(2);
+
+      // first observer should NOT emit a patch
+      expect(countOne).toReallyEqual(2);      
+    });
+    it("Moving an element in the array should change its path", function() {
+
+      var obj = {
+        arrayOfArrays: [[{item1: 'item1'}],[{item2: 'item2'}]]
+      };
+      
+      const spy = jasmine.createSpy('spy');
+      var observedObj = new JSONPatcherProxy(obj).observe(true, spy);
+      const item2reference = observedObj.arrayOfArrays[1][0];
+      item2reference.item2 = 'item2 modified'
+
+      // control call, nothing important
+      var args = spy.calls.mostRecent().args[0];     
+
+      // path is /arrayOfArrays/1/0/item2
+      expect(args).toEqual({ op:"replace", path: "/arrayOfArrays/1/0/item2", value: "item2 modified"});
+
+      //remove first array element
+      observedObj.arrayOfArrays.shift();
+
+
+      item2reference.item2 = 'item2 modified again';
+
+      args = spy.calls.mostRecent().args[0];     
+      
+      //now item2reference.item2  path should change to "/arrayOfArrays/0/0/item2"
+      expect(args).toEqual({ op:"replace", path: "/arrayOfArrays/0/0/item2", value: "item2 modified again"});
+    })
+  });
+
   describe('stopping observing', function() {
     it("shouldn't emit patches after calling `disableTraps`", function() {
       var obj = {
@@ -1254,9 +1332,6 @@ describe('proxy', function() {
 
       // modifying root should throw
       expect(() => (observedObj.add = 'added')).toThrow();
-
-      // modifying detached sub-object should throw
-      expect(() => (childObjectCached.add = 'added')).toThrow();
     });
   });
 
