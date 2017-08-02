@@ -191,6 +191,7 @@ const JSONPatcherProxy = (function() {
           const proxyInstance = instance.proxifiedObjectsMap.get(target[key]);
 
           if (proxyInstance) {
+            instance.objectsPathsMap.delete(proxyInstance.originalObject);
             instance.disableTrapsForProxy(proxyInstance.proxy);
             instance.proxifiedObjectsMap.delete(target[key]);
           }
