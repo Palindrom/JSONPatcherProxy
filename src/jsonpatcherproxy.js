@@ -24,7 +24,6 @@ const JSONPatcherProxy = (function() {
     * @constructor
     */
   function JSONPatcherProxy(root, showDetachedWarning) {
-
     this.proxifiedObjectsMap = new Map();
     this.objectsPathsMap = new Map();
     // default to true
@@ -72,6 +71,25 @@ const JSONPatcherProxy = (function() {
     if (str.indexOf('/') === -1 && str.indexOf('~') === -1) return str;
     return str.replace(/~/g, '~0').replace(/\//g, '~1');
   };
+  JSONPatcherProxy.prototype.getOrSetPath = function(target, path, key) {
+    var cachedProxy = this.objectsPathsMap.get(target);
+    var distPath = path;
+    if (cachedProxy) {
+      distPath =
+        cachedProxy +
+        '/' +
+        JSONPatcherProxy.escapePathComponent(key.toString());
+    } else {
+      // first time we meet this object
+      distPath =
+        path + '/' + JSONPatcherProxy.escapePathComponent(key.toString());
+
+      // cache its path
+      this.objectsPathsMap.set(target, path);
+    }
+    return distPath;
+  };
+
   JSONPatcherProxy.prototype.generateProxyAtPath = function(obj, path) {
     if (!obj) {
       return obj;
@@ -85,29 +103,21 @@ const JSONPatcherProxy = (function() {
         return Reflect.get(target, propKey, receiver);
       },
       set: function(target, key, receiver) {
-        var distPath;
-        var cachedProxy;
 
         /* each proxified object has its path cached, we need to use that instead of `path` variable
         because at one point in the future, paths might change and we will simply update our cache instead of 
         proxifying again.  */
-        if ((cachedProxy = instance.objectsPathsMap.get(target))) {
-          distPath =
-            cachedProxy +
-            '/' +
-            JSONPatcherProxy.escapePathComponent(key.toString());
-        } else { // first time we meet this object
-          distPath =
-            path + '/' + JSONPatcherProxy.escapePathComponent(key.toString());
 
-            // cache its path
-          instance.objectsPathsMap.set(target, path);
-        }
+        var distPath = instance.getOrSetPath(target, path, key);
 
         /* in case the set value is already proxified by a different instance of JSONPatcherProxy */
-        if (receiver && receiver._isProxified && !instance.proxifiedObjectsMap.has(receiver)) {          
+        if (
+          receiver &&
+          receiver._isProxified &&
+          !instance.proxifiedObjectsMap.has(receiver)
+        ) {
           receiver = JSONPatcherProxy.deepClone(receiver);
-        }        
+        }
 
         // if the new value is an object, make sure to watch it
         if (
@@ -195,7 +205,7 @@ const JSONPatcherProxy = (function() {
     // cache traps object to disable them later.
     proxy.trapsInstance = traps;
     /* keeping track of all the proxies to be able to revoke them later */
-    this.proxifiedObjectsMap.set(proxy.proxy, {proxy, originalObject: obj});
+    this.proxifiedObjectsMap.set(proxy.proxy, { proxy, originalObject: obj });
     return proxy.proxy;
   };
   //grab tree's leaves one by one, encapsulate them into a proxy and return
@@ -295,7 +305,8 @@ const JSONPatcherProxy = (function() {
     */
     if (record) this.patches = [];
     this.originalObject = JSONPatcherProxy.deepClone(this.originalObject);
-    return (this.cachedProxy = this.proxifyObjectTree(this.originalObject));
+    this.cachedProxy = this.proxifyObjectTree(this.originalObject);
+    return this.cachedProxy;
   };
   /**
    * If the observed is set to record, it will synchronously return all the patches and empties patches array.
@@ -311,9 +322,9 @@ const JSONPatcherProxy = (function() {
    */
   JSONPatcherProxy.prototype.revoke = function() {
     this.proxifiedObjectsMap.forEach(el => {
-     el.proxy.revoke();
+      el.proxy.revoke();
     });
-  }
+  };
   /**
    * Disables all proxies' traps, turning the observed object into a forward-proxy object, like a normal object that you can modify silently.
    */
