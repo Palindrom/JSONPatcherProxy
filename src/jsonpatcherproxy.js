@@ -1,4 +1,4 @@
-'use strict;';
+'use strict';
 /**
  * A helper function that calls Reflect.set.
  * It is utilized to re-populate path history map after every `Reflect.set` call.
@@ -8,9 +8,8 @@
  * @param {any} newValue the new set value
  */
 function ownReflectSet(instance, target, key, newValue) {
-  /* we traverse the new (post-apply)
-  object and update proxies paths accordingly */
   const result = Reflect.set(target, key, newValue);
+  /* we traverse the new (post-apply) object and update proxies paths accordingly */
   instance._resetCachedProxiesPaths(instance.cachedProxy, '');
   return result;
 }
@@ -80,7 +79,7 @@ const JSONPatcherProxy = (function() {
   };
   /**
     * A helper function that retrieves the object path from object paths map. 
-    * And it if failed to find it, it sets it for future retrieval.
+    * And if it failed to find it, it sets it for future retrieval.
     * @param {Object} target the object that you need its path
     * @param {String} string the path used when object is not found in object-path cache
   */
@@ -100,13 +99,13 @@ const JSONPatcherProxy = (function() {
     }
     const instance = this;
     const traps = {
-      get: function(target, propKey, receiver) {
+      get: function(target, propKey, newValue) {
         if (propKey.toString() === '_isProxified') {
           return true; //to distinguish proxies
         }
-        return Reflect.get(target, propKey, receiver);
+        return Reflect.get(target, propKey, newValue);
       },
-      set: function(target, key, receiver) {
+      set: function(target, key, newValue) {
 
         /* each proxified object has its path cached, we need to use that instead of `path` variable
         because at one point in the future, paths might change and we will simply update our cache instead of 
@@ -116,22 +115,22 @@ const JSONPatcherProxy = (function() {
 
         /* in case the set value is already proxified by a different instance of JSONPatcherProxy */
         if (
-          receiver &&
-          receiver._isProxified &&
-          !instance.proxifiedObjectsMap.has(receiver)
+          newValue &&
+          newValue._isProxified &&
+          !instance.proxifiedObjectsMap.has(newValue)
         ) {
-          receiver = JSONPatcherProxy.deepClone(receiver);
+          newValue = JSONPatcherProxy.deepClone(newValue);
         }
 
         // if the new value is an object, make sure to watch it
         if (
-          receiver /* because `null` is in object */ &&
-          typeof receiver === 'object' &&
-          receiver._isProxified !== true
+          newValue &&
+          typeof newValue === 'object' &&
+          newValue._isProxified !== true
         ) {
-          receiver = instance._proxifyObjectTreeRecursively(receiver, destinationPropKey);
+          newValue = instance._proxifyObjectTreeRecursively(newValue, destinationPropKey);
         }
-        if (typeof receiver === 'undefined') {
+        if (typeof newValue === 'undefined') {
           if (target.hasOwnProperty(key)) {
             // when array element is set to `undefined`, should generate replace to `null`
             if (Array.isArray(target)) {
@@ -144,13 +143,13 @@ const JSONPatcherProxy = (function() {
             } else {
               instance.defaultCallback({ op: 'remove', path: destinationPropKey });
             }
-            return ownReflectSet(instance, target, key, receiver);
+            return ownReflectSet(instance, target, key, newValue);
           } else if (!Array.isArray(target)) {
-            return ownReflectSet(instance, target, key, receiver);
+            return ownReflectSet(instance, target, key, newValue);
           }
         }
         if (Array.isArray(target) && !Number.isInteger(+key.toString())) {
-          return ownReflectSet(instance, target, key, receiver);
+          return ownReflectSet(instance, target, key, newValue);
         }
         if (target.hasOwnProperty(key)) {
           if (typeof target[key] === 'undefined') {
@@ -158,31 +157,31 @@ const JSONPatcherProxy = (function() {
               instance.defaultCallback({
                 op: 'replace',
                 path: destinationPropKey,
-                value: receiver
+                value: newValue
               });
             } else {
               instance.defaultCallback({
                 op: 'add',
                 path: destinationPropKey,
-                value: receiver
+                value: newValue
               });
             }
-            return ownReflectSet(instance, target, key, receiver);
+            return ownReflectSet(instance, target, key, newValue);
           } else {
             instance.defaultCallback({
               op: 'replace',
               path: destinationPropKey,
-              value: receiver
+              value: newValue
             });
-            return ownReflectSet(instance, target, key, receiver);
+            return ownReflectSet(instance, target, key, newValue);
           }
         } else {
           instance.defaultCallback({
             op: 'add',
             path: destinationPropKey,
-            value: receiver
+            value: newValue
           });
-          return ownReflectSet(instance, target, key, receiver);
+          return ownReflectSet(instance, target, key, newValue);
         }
       },
       deleteProperty: function(target, key) {
@@ -196,7 +195,7 @@ const JSONPatcherProxy = (function() {
 
           if (revokableProxyInstance) {
             instance.objectsPathsMap.delete(revokableProxyInstance.originalObject);
-            instance.disableTrapsForProxy(revokableProxyInstance.proxy);
+            instance.disableTrapsForProxy(revokableProxyInstance);
             instance.proxifiedObjectsMap.delete(target[key]);
           }
         }
@@ -206,12 +205,13 @@ const JSONPatcherProxy = (function() {
         return result;
       }
     };
-    const proxy = Proxy.revocable(obj, traps);
+    const revocableInstance = Proxy.revocable(obj, traps);
     // cache traps object to disable them later.
-    proxy.trapsInstance = traps;
+    revocableInstance.trapsInstance = traps;
+    revocableInstance.originalObject = obj;
     /* keeping track of all the proxies to be able to revoke them later */
-    this.proxifiedObjectsMap.set(proxy.proxy, { proxy, originalObject: obj });
-    return proxy.proxy;
+    this.proxifiedObjectsMap.set(revocableInstance.proxy, revocableInstance);
+    return revocableInstance.proxy;
   };
   //grab tree's leaves one by one, encapsulate them into a proxy and return
   JSONPatcherProxy.prototype._proxifyObjectTreeRecursively = function(
@@ -285,13 +285,13 @@ const JSONPatcherProxy = (function() {
       const message =
         "You're accessing an object that is detached from the observedObject tree, see https://github.com/Palindrom/JSONPatcherProxy#detached-objects";
       
-      revokableProxyInstance.trapsInstance.set = (targetObject, propKey, receiver) => {
+      revokableProxyInstance.trapsInstance.set = (targetObject, propKey, newValue) => {
         console.warn(message);
-        return Reflect.set(targetObject, propKey, receiver);
+        return Reflect.set(targetObject, propKey, newValue);
       };
-      revokableProxyInstance.trapsInstance.set = (targetObject, propKey, receiver) => {
+      revokableProxyInstance.trapsInstance.set = (targetObject, propKey, newValue) => {
         console.warn(message);
-        return Reflect.set(targetObject, propKey, receiver);
+        return Reflect.set(targetObject, propKey, newValue);
       };
       revokableProxyInstance.trapsInstance.deleteProperty = (targetObject, propKey) => {
         return Reflect.deleteProperty(targetObject, propKey);
@@ -338,14 +338,14 @@ const JSONPatcherProxy = (function() {
    */
   JSONPatcherProxy.prototype.revoke = function() {
     this.proxifiedObjectsMap.forEach(el => {
-      el.proxy.revoke();
+      el.revoke();
     });
   };
   /**
    * Disables all proxies' traps, turning the observed object into a forward-proxy object, like a normal object that you can modify silently.
    */
   JSONPatcherProxy.prototype.disableTraps = function() {
-    this.proxifiedObjectsMap.forEach(el => this.disableTrapsForProxy(el.proxy));
+    this.proxifiedObjectsMap.forEach(this.disableTrapsForProxy, this);
   };
   return JSONPatcherProxy;
 })();
