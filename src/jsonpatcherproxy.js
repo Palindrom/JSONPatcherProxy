@@ -7,7 +7,7 @@
  */
 
 /** Class representing a JS Object observer  */
-const JSONPatcherProxy = (function() {
+const JSONPatcherProxy = (function () {
   /**
    * A helper function that calls Reflect.set.
    * It is utilized to re-populate path history map after every `Reflect.set` call.
@@ -23,12 +23,12 @@ const JSONPatcherProxy = (function() {
     return result;
   }
   /**
-    * Creates an instance of JSONPatcherProxy around your object of interest `root`. 
-    * @param {Object|Array} root - the object you want to wrap
-    * @param {Boolean} [showDetachedWarning] - whether to log a warning when a detached sub-object is modified @see {@link https://github.com/Palindrom/JSONPatcherProxy#detached-objects} 
-    * @returns {JSONPatcherProxy}
-    * @constructor
-    */
+   * Creates an instance of JSONPatcherProxy around your object of interest `root`. 
+   * @param {Object|Array} root - the object you want to wrap
+   * @param {Boolean} [showDetachedWarning] - whether to log a warning when a detached sub-object is modified @see {@link https://github.com/Palindrom/JSONPatcherProxy#detached-objects} 
+   * @returns {JSONPatcherProxy}
+   * @constructor
+   */
   function JSONPatcherProxy(root, showDetachedWarning) {
     this.proxifiedObjectsMap = new Map();
     this.objectsPathsMap = new Map();
@@ -61,9 +61,9 @@ const JSONPatcherProxy = (function() {
     };
   }
   /**
-  * Deep clones your object and returns a new object.
-  */
-  JSONPatcherProxy.deepClone = function(obj) {
+   * Deep clones your object and returns a new object.
+   */
+  JSONPatcherProxy.deepClone = function (obj) {
     switch (typeof obj) {
       case 'object':
         return JSON.parse(JSON.stringify(obj)); //Faster than ES5 clone - http://jsperf.com/deep-cloning-of-objects/5
@@ -73,17 +73,17 @@ const JSONPatcherProxy = (function() {
         return obj; //no need to clone primitives
     }
   };
-  JSONPatcherProxy.escapePathComponent = function(str) {
+  JSONPatcherProxy.escapePathComponent = function (str) {
     if (str.indexOf('/') === -1 && str.indexOf('~') === -1) return str;
     return str.replace(/~/g, '~0').replace(/\//g, '~1');
   };
   /**
-    * A helper function that retrieves the object path from object paths map. 
-    * And if it failed to find it, it sets it for future retrieval.
-    * @param {Object} target the object that you need its path
-    * @param {String} string the path used when object is not found in object-path cache
-  */
-  JSONPatcherProxy.prototype.getOrSetObjectPath = function(target, path) {
+   * A helper function that retrieves the object path from object paths map. 
+   * And if it failed to find it, it sets it for future retrieval.
+   * @param {Object} target the object that you need its path
+   * @param {String} string the path used when object is not found in object-path cache
+   */
+  JSONPatcherProxy.prototype.getOrSetObjectPath = function (target, path) {
     const cachedPath = this.objectsPathsMap.get(target);
     if (cachedPath) {
       return cachedPath;
@@ -93,19 +93,19 @@ const JSONPatcherProxy = (function() {
     }
   };
 
-  JSONPatcherProxy.prototype.generateProxyAtPath = function(obj, path) {
+  JSONPatcherProxy.prototype.generateProxyAtPath = function (obj, path) {
     if (!obj) {
       return obj;
     }
     const instance = this;
     const traps = {
-      get: function(target, propKey, newValue) {
+      get: function (target, propKey, newValue) {
         if (propKey.toString() === '_isProxified') {
           return true; //to distinguish proxies
         }
         return Reflect.get(target, propKey, newValue);
       },
-      set: function(target, key, newValue) {
+      set: function (target, key, newValue) {
         /* each proxified object has its path cached, we need to use that instead of `path` variable
         because at one point in the future, paths might change and we will simply update our cache instead of 
         proxifying again.  */
@@ -192,12 +192,11 @@ const JSONPatcherProxy = (function() {
           return ownReflectSet(instance, target, key, newValue);
         }
       },
-      deleteProperty: function(target, key) {
+      deleteProperty: function (target, key) {
         if (typeof target[key] !== 'undefined') {
           instance.defaultCallback({
             op: 'remove',
-            path:
-              path + '/' + JSONPatcherProxy.escapePathComponent(key.toString())
+            path: path + '/' + JSONPatcherProxy.escapePathComponent(key.toString())
           });
           const revokableProxyInstance = instance.proxifiedObjectsMap.get(
             target[key]
@@ -226,7 +225,7 @@ const JSONPatcherProxy = (function() {
     return revocableInstance.proxy;
   };
   //grab tree's leaves one by one, encapsulate them into a proxy and return
-  JSONPatcherProxy.prototype._proxifyObjectTreeRecursively = function(
+  JSONPatcherProxy.prototype._proxifyObjectTreeRecursively = function (
     root,
     path
   ) {
@@ -246,7 +245,7 @@ const JSONPatcherProxy = (function() {
     A function that recursively traverses the proxy tree and caches all its proxy-object-children in a map
     @param {Proxy} root the proxy object
   */
-  JSONPatcherProxy.prototype._resetCachedProxiesPaths = function(root, path) {
+  JSONPatcherProxy.prototype._resetCachedProxiesPaths = function (root, path) {
     /* deleting array elements could render other array elements paths incorrect, 
     this function fixes all incorrect paths efficiently */
     for (let key in root) {
@@ -277,7 +276,7 @@ const JSONPatcherProxy = (function() {
     }
   };
   //this function is for aesthetic purposes
-  JSONPatcherProxy.prototype.proxifyObjectTree = function(root) {
+  JSONPatcherProxy.prototype.proxifyObjectTree = function (root) {
     /*
     while proxyifying object tree,
     the proxyifying operation itself is being
@@ -295,7 +294,7 @@ const JSONPatcherProxy = (function() {
    * Turns a proxified object into a forward-proxy object; doesn't emit any patches anymore, like a normal object
    * @param {Proxy} proxy - The target proxy object
    */
-  JSONPatcherProxy.prototype.disableTrapsForProxy = function(
+  JSONPatcherProxy.prototype.disableTrapsForProxy = function (
     revokableProxyInstance
   ) {
     if (this.showDetachedWarning) {
@@ -335,7 +334,7 @@ const JSONPatcherProxy = (function() {
    * @param {Boolean} [record] - whether to record object changes to a later-retrievable patches array.
    * @param {Function} [callback] - this will be synchronously called with every object change with a single `patch` as the only parameter.
    */
-  JSONPatcherProxy.prototype.observe = function(record, callback) {
+  JSONPatcherProxy.prototype.observe = function (record, callback) {
     if (!record && !callback) {
       throw new Error('You need to either record changes or pass a callback');
     }
@@ -355,7 +354,7 @@ const JSONPatcherProxy = (function() {
   /**
    * If the observed is set to record, it will synchronously return all the patches and empties patches array.
    */
-  JSONPatcherProxy.prototype.generate = function() {
+  JSONPatcherProxy.prototype.generate = function () {
     if (!this.isRecording) {
       throw new Error('You should set record to true to get patches later');
     }
@@ -364,7 +363,7 @@ const JSONPatcherProxy = (function() {
   /**
    * Revokes all proxies rendering the observed object useless and good for garbage collection @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy/revocable}
    */
-  JSONPatcherProxy.prototype.revoke = function() {
+  JSONPatcherProxy.prototype.revoke = function () {
     this.proxifiedObjectsMap.forEach(el => {
       el.revoke();
     });
@@ -372,7 +371,7 @@ const JSONPatcherProxy = (function() {
   /**
    * Disables all proxies' traps, turning the observed object into a forward-proxy object, like a normal object that you can modify silently.
    */
-  JSONPatcherProxy.prototype.disableTraps = function() {
+  JSONPatcherProxy.prototype.disableTraps = function () {
     this.proxifiedObjectsMap.forEach(this.disableTrapsForProxy, this);
   };
   return JSONPatcherProxy;
