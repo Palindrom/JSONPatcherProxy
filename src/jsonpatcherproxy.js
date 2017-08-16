@@ -1,7 +1,7 @@
 'use strict';
 /*!
  * https://github.com/Palindrom/JSONPatcherProxy
- * JSONPatcherProxy version: 0.0.6
+ * JSONPatcherProxy version: 0.0.7
  * (c) 2017 Starcounter 
  * MIT license
  */
