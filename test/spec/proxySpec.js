@@ -1196,6 +1196,32 @@ describe('proxy', function() {
       // first observer should NOT emit a patch
       expect(countOne).toReallyEqual(2);      
     });
+    it("Shifting an array should refresh path correctly", function() {
+
+      var obj = {
+            arr: [{ name: 'omar' }, { name: 'ali' }]
+        }
+      
+      const spy = jasmine.createSpy('spy');
+      var observedObj = new JSONPatcherProxy(obj).observe(true, spy);
+
+      observedObj.arr.shift();
+      
+      expect(spy.calls.count()).toEqual(2);
+
+      //is it shifted?
+      expect(observedObj.arr[0].name).toEqual('ali');
+
+      // is newly-moved first items aware of its new path?
+      observedObj.arr[0].name = 'steve';
+        
+      // should be called one more time
+      expect(spy.calls.count()).toEqual(3);
+
+      var args = spy.calls.mostRecent().args[0];     
+
+      expect(args).toEqual({ op:"replace", path: "/arr/0/name", value: "steve"});
+    })
     it("Moving an element in the array should change its path", function() {
 
       var obj = {
