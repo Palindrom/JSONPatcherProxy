@@ -91,6 +91,33 @@ var observedObject = jsonPatcherProxy.observe(true, function(patch) {
 observedObject.firstName = "Albert";
 ```
 
+### Multiple instances collisions
+
+If you have two or more instances of JSONPatcherProxy, exchanging values of type **object** among them might cause unexpected issues.
+
+Consider
+```js
+var myObj = { contactDetails: { phoneNumbers: [ { number:"555-123" }] } };
+var jsonPatcherProxyOne = new JSONPatcherProxy( myObj );
+var observedObjectOne = jsonPatcherProxyOne.observe(true);
+
+var jsonPatcherProxyTwo = new JSONPatcherProxy( myObj );
+var observedObjectTwo = jsonPatcherProxyTwo.observe(true);
+
+// this deep clones observedObjectOne.contactDetails before setting it to observedObjectTwo.newContactDetails, to avoid double proxification.
+observedObjectTwo.newContactDetails = observedObjectOne.contactDetails;
+```
+In this case, you might expect mutating `observedObjectOne.contactDetails` would be equivalent to mutating `observedObjectTwo.newContactDetails`, but it's not. because setting proxies coming from other instances of JSONPatcherProxies will mean deep cloning to remove the originally watching proxy and proxify the tree again.
+
+```js
+var myObj = { firstName:"Joachim", lastName:"Wester", contactDetails: { phoneNumbers: [ { number:"555-123" }] } };
+var jsonPatcherProxy = new JSONPatcherProxy( myObj );
+var observedObject = jsonPatcherProxy.observe(true, function(patch) {
+    // patch == { op:"replace", path="/firstName", value:"Albert"}
+});
+observedObject.firstName = "Albert";
+```
+
 ## API
 
 ## Object observing
@@ -114,7 +141,7 @@ Sets up a deep proxy observer on `root` that listens for changes in the tree. Wh
 Returns  a `Proxy` mirror of your object.
 
 - Note 1: you must either set `record` to `true` or pass a callback.
-- Note 2: you have to use the return value of this function as your object of interest. Changes to the original object will go unnoticed.
+- Note 2: you have to use the return value of this function as your object of interest. Changes to the original object will go unnoticed. **Because `observe` function deep clones your object before proxifying it**.
 - Note 3: please make sure to call `JSONPatcherProxy#generate` often if you choose to record. Because the patches will accumulate if you don't.
 - Note 4: the returned mirror object has a property `_isProxified` set to true, you can use this to tell an object and its mirror apart. Also if your `root` object or any deep object inside it has `_isProxified` property set to `true` it won't be proxified => will not emit patches.
 
