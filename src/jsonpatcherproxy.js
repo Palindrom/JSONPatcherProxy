@@ -30,6 +30,18 @@ const JSONPatcherProxy = (function() {
     * @constructor
     */
   function JSONPatcherProxy(root, showDetachedWarning) {
+    this.asyncTimeout = 0;
+    this.currentOperationsQueue = [];
+
+    this.queueOperation = op => {
+      if (!this.isObserving) {
+        return;
+      }
+      clearTimeout(this.asyncTimeout);
+      this.currentOperationsQueue.push(op);
+      this.asyncTimeout = setTimeout(this.defaultCallback, 1);
+    };
+
     this.isProxifyingTreeNow = false;
     this.isObserving = false;
     this.proxifiedObjectsMap = new Map();
@@ -42,17 +54,20 @@ const JSONPatcherProxy = (function() {
     this.showDetachedWarning = showDetachedWarning;
     this.originalObject = root;
     this.cachedProxy = null;
-    this.isRecording = false;
-    this.userCallback;
+
+    this.defaultCallback = () => {
+      if (this.userCallback && this.currentOperationsQueue.length) {
+        this.userCallback(this.currentOperationsQueue);
+      }
+      this.currentOperationsQueue = [];
+    };
+
+    const deactivatedCallback = () => (this.currentOperationsQueue = []);
     /**
      * @memberof JSONPatcherProxy
      * Restores callback back to the original one provided to `observe`.
      */
     this.resume = () => {
-      this.defaultCallback = operation => {
-        this.isRecording && this.patches.push(operation);
-        this.userCallback && this.userCallback(operation);
-      };
       this.isObserving = true;
     };
     /**
@@ -60,7 +75,6 @@ const JSONPatcherProxy = (function() {
      * Replaces your callback with a noop function.
      */
     this.pause = () => {
-      this.defaultCallback = () => {};
       this.isObserving = false;
     };
   }
@@ -171,13 +185,13 @@ const JSONPatcherProxy = (function() {
             // when array element is set to `undefined`, should generate replace to `null`
             if (Array.isArray(target)) {
               //undefined array elements are JSON.stringified to `null`
-              instance.defaultCallback({
+              instance.queueOperation({
                 op: 'replace',
                 path: destinationPropKey,
                 value: null
               });
             } else {
-              instance.defaultCallback({
+              instance.queueOperation({
                 op: 'remove',
                 path: destinationPropKey
               });
@@ -193,13 +207,13 @@ const JSONPatcherProxy = (function() {
         if (target.hasOwnProperty(key)) {
           if (typeof target[key] === 'undefined') {
             if (Array.isArray(target)) {
-              instance.defaultCallback({
+              instance.queueOperation({
                 op: 'replace',
                 path: destinationPropKey,
                 value: newValue
               });
             } else {
-              instance.defaultCallback({
+              instance.queueOperation({
                 op: 'add',
                 path: destinationPropKey,
                 value: newValue
@@ -207,7 +221,7 @@ const JSONPatcherProxy = (function() {
             }
             return ownReflectSet(instance, target, key, newValue);
           } else {
-            instance.defaultCallback({
+            instance.queueOperation({
               op: 'replace',
               path: destinationPropKey,
               value: newValue
@@ -215,17 +229,17 @@ const JSONPatcherProxy = (function() {
             return ownReflectSet(instance, target, key, newValue);
           }
         } else {
-          instance.defaultCallback({
+          instance.queueOperation({
             op: 'add',
             path: destinationPropKey,
             value: newValue
           });
           return ownReflectSet(instance, target, key, newValue);
         }
-      }, 
+      },
       deleteProperty: function(target, key) {
         if (typeof target[key] !== 'undefined') {
-          instance.defaultCallback({
+          instance.queueOperation({
             op: 'remove',
             path:
               path + '/' + JSONPatcherProxy.escapePathComponent(key.toString())
@@ -377,34 +391,31 @@ const JSONPatcherProxy = (function() {
   };
   /**
    * Proxifies the object that was passed in the constructor and returns a proxified mirror of it. Even though both parameters are options. You need to pass at least one of them.
-   * @param {Boolean} [record] - whether to record object changes to a later-retrievable patches array.
    * @param {Function} [callback] - this will be synchronously called with every object change with a single `patch` as the only parameter.
    */
-  JSONPatcherProxy.prototype.observe = function(record, callback) {
-    if (!record && !callback) {
-      throw new Error('You need to either record changes or pass a callback');
-    }
-    this.isRecording = record;
+  JSONPatcherProxy.prototype.observe = function(callback) {
     if (callback) this.userCallback = callback;
-    /*
-    I moved it here to remove it from `unobserve`,
-    this will also make the constructor faster, why initiate
-    the array before they decide to actually observe with recording?
-    They might need to use only a callback.
-    */
-    if (record) this.patches = [];
+
     this.originalObject = JSONPatcherProxy.deepClone(this.originalObject);
     this.cachedProxy = this.proxifyObjectTree(this.originalObject);
     return this.cachedProxy;
   };
   /**
-   * If the observed is set to record, it will synchronously return all the patches and empties patches array.
+   * Use to get the patch synchronously instead of waiting for the async callback call
    */
   JSONPatcherProxy.prototype.generate = function() {
-    if (!this.isRecording) {
-      throw new Error('You should set record to true to get patches later');
-    }
-    return this.patches.splice(0, this.patches.length);
+    clearTimeout(this.asyncTimeout);
+    return this.currentOperationsQueue.splice(
+      0,
+      this.currentOperationsQueue.length
+    );
+  };
+  /**
+   * Use to get the fire the callback synchronously instead of waiting for the async callback call
+   */
+  JSONPatcherProxy.prototype.touch = function() {
+    clearTimeout(this.asyncTimeout);
+    this.defaultCallback();
   };
   /**
    * Revokes all proxies rendering the observed object useless and good for garbage collection @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy/revocable}
