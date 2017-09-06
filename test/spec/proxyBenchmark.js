@@ -1,91 +1,132 @@
-var obj, obj2, patches;
+var obj, obj2;
+
 if (typeof window === 'undefined') {
-    var jsdom = require("jsdom").jsdom;
-    var doc = jsdom(undefined, undefined);
-    global.window = doc.defaultView;
-    global.document = doc.defaultView.document;
+  var jsdom = require('jsdom').jsdom;
+  var doc = jsdom(undefined, undefined);
+  global.window = doc.defaultView;
+  global.document = doc.defaultView.document;
 }
 
 if (typeof jsonpatch === 'undefined') {
-    jsonpatch = require('fast-json-patch');
+  var jsonpatch = require('fast-json-patch');
 }
 
 if (typeof JSONPatcherProxy === 'undefined') {
-    JSONPatcherProxy = require('../../dist/jsonpatcherproxy.js');
+  var JSONPatcherProxy = require('../../src/jsonpatcherproxy.js');
 }
 
 if (typeof Benchmark === 'undefined') {
-    var Benchmark = require('benchmark');
-    var benchmarkResultsToConsole = require('./../helpers/benchmarkReporter.js').benchmarkResultsToConsole;
+  var Benchmark = require('benchmark');
+  var benchmarkResultsToConsole = require('./../helpers/benchmarkReporter.js')
+    .benchmarkResultsToConsole;
 }
 
-console.log("Benchmark: Proxy");
+var suite = new Benchmark.Suite();
+suite.add('jsonpatcherproxy generate operation', function() {
+  var obj = {
+    firstName: 'Albert',
+    lastName: 'Einstein',
+    phoneNumbers: [
+      {
+        number: '12345'
+      },
+      {
+        number: '45353'
+      }
+    ]
+  };
 
-var suite = new Benchmark.Suite;
-suite.add('generate operation', function() {
+  var jsonPatcherProxy = new JSONPatcherProxy(obj);
+  var observedObj = jsonPatcherProxy.observe(true);
 
-    var obj = {
-        firstName: "Albert",
-        lastName: "Einstein",
-        phoneNumbers: [{
-            number: "12345"
-        }, {
-            number: "45353"
-        }]
-    };
+  var patches = jsonPatcherProxy.generate();
 
-    var jsonPatcherProxy = new JSONPatcherProxy(obj);
-    var observedObj = jsonPatcherProxy.observe(true);
+  observedObj.firstName = 'Joachim';
+  observedObj.lastName = 'Wester';
+  observedObj.phoneNumbers[0].number = '123';
+  observedObj.phoneNumbers[1].number = '456';
 
-    patches = jsonPatcherProxy.generate();    
-
-    observedObj.firstName = "Joachim";
-    observedObj.lastName = "Wester";
-    observedObj.phoneNumbers[0].number = "123";
-    observedObj.phoneNumbers[1].number = "456";
-
-    patches = jsonPatcherProxy.generate();
-    obj2 = {
-        firstName: "Albert",
-        lastName: "Einstein",
-        phoneNumbers: [{
-            number: "12345"
-        }, {
-            number: "45353"
-        }]
-    };
-
-    jsonpatch.apply(obj2, patches);
+ 
 });
-suite.add('compare operation', function() {
-    var obj = {
-        firstName: "Albert",
-        lastName: "Einstein",
-        phoneNumbers: [{
-            number: "12345"
-        }, {
-            number: "45353"
-        }]
-    };
-    var obj2 = {
-        firstName: "Joachim",
-        lastName: "Wester",
-        mobileNumbers: [{
-            number: "12345"
-        }, {
-            number: "45353"
-        }]
-    };
+suite.add('jsonpatch generate operation', function() {
+  var observedObj = {
+    firstName: 'Albert',
+    lastName: 'Einstein',
+    phoneNumbers: [
+      {
+        number: '12345'
+      },
+      {
+        number: '45353'
+      }
+    ]
+  };
+  var observer = jsonpatch.observe(observedObj);
 
-    var patches = jsonpatch.compare(obj, obj2);
+  observedObj.firstName = 'Joachim';
+  observedObj.lastName = 'Wester';
+  observedObj.phoneNumbers[0].number = '123';
+  observedObj.phoneNumbers[1].number = '456';
+
+  jsonpatch.generate(observer);
+});
+
+suite.add('jsonpatcherproxy generate operation - huge object', function() {
+  var singleCar = { name: 'Tesla', speed: 100 };
+
+  var obj = {
+    firstName: 'Albert',
+    lastName: 'Einstein',
+    cars: []
+  };
+
+  for (var i = 0; i < 100; i++) {
+    var copy = JSONPatcherProxy.deepClone(singleCar);
+    var temp = copy;
+    for (var j = 0; j < 5; j++) {
+      temp.temp = JSONPatcherProxy.deepClone(singleCar);
+      temp = temp.temp;
+    }
+    obj.cars.push(copy);
+  }
+  var jsonPatcherProxy = new JSONPatcherProxy(obj);
+  var observedObj = jsonPatcherProxy.observe(true);
+
+  observedObj.cars.shift();
+});
+
+suite.add('jsonpatch generate operation - huge object', function() {
+  var singleCar = { name: 'Tesla', speed: 100 };
+
+  var obj = {
+    firstName: 'Albert',
+    lastName: 'Einstein',
+    cars: []
+  };
+
+  for (var i = 0; i < 100; i++) {
+    var copy = JSONPatcherProxy.deepClone(singleCar);
+    var temp = copy;
+    for (var j = 0; j < 5; j++) {
+      temp.temp = JSONPatcherProxy.deepClone(singleCar);
+      temp = temp.temp;
+    }
+    obj.cars.push(copy);
+  }
+
+  var observer = jsonpatch.observe(obj);
+
+  obj.cars.shift();
+
+  jsonpatch.generate(observer);
 });
 
 // if we are in the browser with benchmark < 2.1.2
-if(typeof benchmarkReporter !== 'undefined'){
-    benchmarkReporter(suite);
+if (typeof benchmarkReporter !== 'undefined') {
+  benchmarkReporter(suite);
 } else {
-    suite.on('complete', function () {
-        benchmarkResultsToConsole(suite);
-    });
-    suite.run();
+  suite.on('complete', function() {
+    benchmarkResultsToConsole(suite);
+  });
+  suite.run();
 }
