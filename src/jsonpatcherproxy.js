@@ -48,7 +48,13 @@ const JSONPatcherProxy = (function() {
     }
     return '';
   }
-
+  /**
+   * The proxy setter trap, this function is used for all proxies and is pre-defined outside for better performance.
+   * @param {JSONPatcherProxy} instance JSONPatcherProxy instance
+   * @param {Object} target the affected object
+   * @param {String} key the effect property's name
+   * @param {Any} newValue the value being set
+   */
   function setTrap(instance, target, key, newValue) {
     const parentPath = findObjectPath(instance, target);
 
@@ -116,6 +122,12 @@ const JSONPatcherProxy = (function() {
             path: destinationPropKey
           });
         }
+        const oldValue = instance.proxifiedObjectsMap.get(target[key]);
+        // was tje deleted a proxified object?
+        if(oldValue) { 
+          instance.parenthoodMap.delete(target[key]);
+          instance.proxifiedObjectsMap.delete(oldValue);
+        }
         return Reflect.set(target, key, newValue);
       } else if (!Array.isArray(target)) {
         return Reflect.set(target, key, newValue);
@@ -157,6 +169,12 @@ const JSONPatcherProxy = (function() {
       return Reflect.set(target, key, newValue);
     }
   }
+  /**
+   * 
+   * @param {JSONPatcherProxy} instance JSONPatcherProxy instance
+   * @param {Object} target the effected object
+   * @param {String} key the effected property's name
+   */
   function deleteTrap(instance, target, key) {
     if (typeof target[key] !== 'undefined') {
       const parentPath = findObjectPath(instance, target);
