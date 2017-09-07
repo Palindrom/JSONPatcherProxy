@@ -8,8 +8,48 @@
 
 /** Class representing a JS Object observer  */
 const JSONPatcherProxy = (function() {
-  function setTrap(instance, target, key, newValue) {
+  /**
+  * Deep clones your object and returns a new object.
+  */
+  function deepClone(obj) {
+    switch (typeof obj) {
+      case 'object':
+        return JSON.parse(JSON.stringify(obj)); //Faster than ES5 clone - http://jsperf.com/deep-cloning-of-objects/5
+      case 'undefined':
+        return null; //this is how JSON.stringify behaves for array items
+      default:
+        return obj; //no need to clone primitives
+    }
+  }
+  JSONPatcherProxy.deepClone = deepClone;
 
+  function escapePathComponent(str) {
+    if (str.indexOf('/') == -1 && str.indexOf('~') == -1) return str;
+    return str.replace(/~/g, '~0').replace(/\//g, '~1');
+  }
+  JSONPatcherProxy.escapePathComponent = escapePathComponent;
+
+  /**
+   * Walk up the parenthood tree to get the path
+   * @param {JSONPatcherProxy} instance 
+   * @param {Object} obj the object you need to find its path
+   */
+  function findObjectPath(instance, obj) {
+    var pathComponents = [];
+    var parentAndPath = instance.parenthoodMap.get(obj);
+    while (parentAndPath && parentAndPath.path) {
+      // because we're walking up-tree, we need to use the array as a stack
+      pathComponents.unshift(parentAndPath.path);
+      parentAndPath = instance.parenthoodMap.get(parentAndPath.parent);
+    }
+    if (pathComponents.length) {
+      const path = pathComponents.join('/');
+      return '/' + path;
+    }
+    return '';
+  }
+
+  function setTrap(instance, target, key, newValue) {
     const parentPath = findObjectPath(instance, target);
 
     var destinationPropKey = parentPath + '/' + escapePathComponent(key);
@@ -118,7 +158,6 @@ const JSONPatcherProxy = (function() {
     }
   }
   function deleteTrap(instance, target, key) {
-    debugger;
     if (typeof target[key] !== 'undefined') {
       const parentPath = findObjectPath(instance, target);
 
@@ -151,25 +190,6 @@ const JSONPatcherProxy = (function() {
       }
     }
     return Reflect.deleteProperty(target, key);
-  }
-  /**
-   * Walk up the parenthood tree to get the path
-   * @param {JSONPatcherProxy} instance 
-   * @param {Object} obj the object you need to find its path
-   */
-  function findObjectPath(instance, obj) {
-    var pathComponents = [];
-    var parentAndPath = instance.parenthoodMap.get(obj);
-    while (parentAndPath && parentAndPath.path) {
-      // because we're walking up-tree, we need to use the array as a stack
-      pathComponents.unshift(parentAndPath.path);
-      parentAndPath = instance.parenthoodMap.get(parentAndPath.parent);
-    }
-    if (pathComponents.length) {
-      const path = pathComponents.join('/');
-      return '/' + path;
-    }
-    return '';
   }
   /* pre-define resume and pause functions to enhance constructors performance */
   function resume() {
@@ -216,26 +236,6 @@ const JSONPatcherProxy = (function() {
      */
     this.pause = pause.bind(this);
   }
-  /**
-  * Deep clones your object and returns a new object.
-  */
-  function deepClone(obj) {
-    switch (typeof obj) {
-      case 'object':
-        return JSON.parse(JSON.stringify(obj)); //Faster than ES5 clone - http://jsperf.com/deep-cloning-of-objects/5
-      case 'undefined':
-        return null; //this is how JSON.stringify behaves for array items
-      default:
-        return obj; //no need to clone primitives
-    }
-  }
-  JSONPatcherProxy.deepClone = deepClone;
-
-  function escapePathComponent(str) {
-    if (str.indexOf('/') == -1 && str.indexOf('~') == -1) return str;
-    return str.replace(/~/g, '~0').replace(/\//g, '~1');
-  }
-  JSONPatcherProxy.escapePathComponent = escapePathComponent;
 
   JSONPatcherProxy.prototype.generateProxyAtPath = function(parent, obj, path) {
     if (!obj) {
@@ -252,7 +252,8 @@ const JSONPatcherProxy = (function() {
     revocableInstance.trapsInstance = traps;
     revocableInstance.originalObject = obj;
 
-    /* keeping track of object's parent and path */    
+    /* keeping track of object's parent and path */
+
     this.parenthoodMap.set(obj, { parent, path });
 
     /* keeping track of all the proxies to be able to revoke them later */

@@ -218,6 +218,7 @@ suite.add('DIRTY-OBSERVE big object', function() {
   var observer = jsonpatch.observe(obj);
   obj.a = 1;
   jsonpatch.generate(observer);
+
 });
 
 // if we are in the browser with benchmark < 2.1.2
