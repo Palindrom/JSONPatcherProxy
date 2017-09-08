@@ -49,7 +49,8 @@ const JSONPatcherProxy = (function() {
     return '';
   }
   /**
-   * The proxy setter trap, this function is used for all proxies and is pre-defined outside for better performance.
+   * A callback to be used as th proxy set trap callback.
+   * It updates parenthood map if needed, proxifies nested newly-added objects, calls default callbacks with the changes occurred.
    * @param {JSONPatcherProxy} instance JSONPatcherProxy instance
    * @param {Object} target the affected object
    * @param {String} key the effect property's name
@@ -123,9 +124,10 @@ const JSONPatcherProxy = (function() {
           });
         }
         const oldValue = instance.proxifiedObjectsMap.get(target[key]);
-        // was tje deleted a proxified object?
+        // was the deleted a proxified object?
         if(oldValue) { 
           instance.parenthoodMap.delete(target[key]);
+          instance.disableTrapsForProxy(oldValue);
           instance.proxifiedObjectsMap.delete(oldValue);
         }
         return Reflect.set(target, key, newValue);
@@ -133,6 +135,7 @@ const JSONPatcherProxy = (function() {
         return Reflect.set(target, key, newValue);
       }
     }
+    /* array props don't emit any patches, to avoid needless `length` patches */
     if (Array.isArray(target) && !Number.isInteger(+key.toString())) {
       return Reflect.set(target, key, newValue);
     }
@@ -170,7 +173,8 @@ const JSONPatcherProxy = (function() {
     }
   }
   /**
-   * 
+   * A callback to be used as th proxy delete trap callback.
+   * It updates parenthood map if needed, calls default callbacks with the changes occurred.
    * @param {JSONPatcherProxy} instance JSONPatcherProxy instance
    * @param {Object} target the effected object
    * @param {String} key the effected property's name
