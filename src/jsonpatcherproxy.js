@@ -9,23 +9,226 @@
 /** Class representing a JS Object observer  */
 const JSONPatcherProxy = (function() {
   /**
-   * A helper function that calls Reflect.set.
-   * It is utilized to re-populate path history map after every `Reflect.set` call.
-   * @param {JSONPatcherProxy} instance JSONPatcherProxy instance
-   * @param {Object} target target object
-   * @param {string} key affected property name 
-   * @param {any} newValue the new set value
+  * Deep clones your object and returns a new object.
+  */
+  function deepClone(obj) {
+    switch (typeof obj) {
+      case 'object':
+        return JSON.parse(JSON.stringify(obj)); //Faster than ES5 clone - http://jsperf.com/deep-cloning-of-objects/5
+      case 'undefined':
+        return null; //this is how JSON.stringify behaves for array items
+      default:
+        return obj; //no need to clone primitives
+    }
+  }
+  JSONPatcherProxy.deepClone = deepClone;
+
+  function escapePathComponent(str) {
+    if (str.indexOf('/') == -1 && str.indexOf('~') == -1) return str;
+    return str.replace(/~/g, '~0').replace(/\//g, '~1');
+  }
+  JSONPatcherProxy.escapePathComponent = escapePathComponent;
+
+  /**
+   * Walk up the parenthood tree to get the path
+   * @param {JSONPatcherProxy} instance 
+   * @param {Object} obj the object you need to find its path
    */
-  function ownReflectSet(instance, target, key, newValue) {
-    const result = Reflect.set(target, key, newValue);
-    /* we traverse the new (post-apply) object and update proxies paths accordingly */
-    instance._resetCachedProxiesPaths(instance.cachedProxy, '');
-    return result;
+  function findObjectPath(instance, obj) {
+    var pathComponents = [];
+    var parentAndPath = instance.parenthoodMap.get(obj);
+    while (parentAndPath && parentAndPath.path) {
+      // because we're walking up-tree, we need to use the array as a stack
+      pathComponents.unshift(parentAndPath.path);
+      parentAndPath = instance.parenthoodMap.get(parentAndPath.parent);
+    }
+    if (pathComponents.length) {
+      const path = pathComponents.join('/');
+      return '/' + path;
+    }
+    return '';
+  }
+  /**
+   * A callback to be used as th proxy set trap callback.
+   * It updates parenthood map if needed, proxifies nested newly-added objects, calls default callbacks with the changes occurred.
+   * @param {JSONPatcherProxy} instance JSONPatcherProxy instance
+   * @param {Object} target the affected object
+   * @param {String} key the effect property's name
+   * @param {Any} newValue the value being set
+   */
+  function setTrap(instance, target, key, newValue) {
+    const parentPath = findObjectPath(instance, target);
+
+    var destinationPropKey = parentPath + '/' + escapePathComponent(key);
+    {
+      if (instance.proxifiedObjectsMap.has(newValue)) {
+        var newValueOriginalObject = instance.proxifiedObjectsMap.get(newValue);
+
+        instance.parenthoodMap.set(newValueOriginalObject.originalObject, {
+          parent: target,
+          path: key
+        });
+      }
+      /*
+        mark already proxified values as inherited.
+        rationale: proxy.arr.shift()
+        will emit
+        {op: replace, path: '/arr/1', value: arr_2}
+        {op: remove, path: '/arr/2'}
+
+        by default, the second operation would revoke the proxy, and this renders arr revoked.
+        That's why we need to remember the proxies that are inherited.
+      */
+      const revokableInstance = instance.proxifiedObjectsMap.get(newValue);
+      /*
+          Why do we need to check instance.isProxifyingTreeNow?
+
+          We need to make sure we mark revokables as inherited ONLY when we're observing,
+          because throughout the first proxification, a sub-object is proxified and then assigned to 
+          its parent object. This assignment of a pre-proxified object can fool us into thinking
+          that it's a proxified object moved around, while in fact it's the first assignment ever. 
+
+          Checking isProxifyingTreeNow ensures this is not happening in the first proxification, 
+          but in fact is is a proxified object moved around the tree
+          */
+      if (revokableInstance && !instance.isProxifyingTreeNow) {
+        revokableInstance.inherited = true;
+      }
+    }
+    // if the new value is an object, make sure to watch it
+    if (
+      newValue &&
+      typeof newValue == 'object' &&
+      !instance.proxifiedObjectsMap.has(newValue)
+    ) {
+      instance.parenthoodMap.set(newValue, {
+        parent: target,
+        path: key
+      });
+      newValue = instance._proxifyObjectTreeRecursively(target, newValue, key);
+    }
+    if (typeof newValue == 'undefined') {
+      if (target.hasOwnProperty(key)) {
+        // when array element is set to `undefined`, should generate replace to `null`
+        if (Array.isArray(target)) {
+          //undefined array elements are JSON.stringified to `null`
+          instance.defaultCallback({
+            op: 'replace',
+            path: destinationPropKey,
+            value: null
+          });
+        } else {
+          instance.defaultCallback({
+            op: 'remove',
+            path: destinationPropKey
+          });
+        }
+        const oldValue = instance.proxifiedObjectsMap.get(target[key]);
+        // was the deleted a proxified object?
+        if(oldValue) { 
+          instance.parenthoodMap.delete(target[key]);
+          instance.disableTrapsForProxy(oldValue);
+          instance.proxifiedObjectsMap.delete(oldValue);
+        }
+        return Reflect.set(target, key, newValue);
+      } else if (!Array.isArray(target)) {
+        return Reflect.set(target, key, newValue);
+      }
+    }
+    /* array props don't emit any patches, to avoid needless `length` patches */
+    if (Array.isArray(target) && !Number.isInteger(+key.toString())) {
+      return Reflect.set(target, key, newValue);
+    }
+    if (target.hasOwnProperty(key)) {
+      if (typeof target[key] == 'undefined') {
+        if (Array.isArray(target)) {
+          instance.defaultCallback({
+            op: 'replace',
+            path: destinationPropKey,
+            value: newValue
+          });
+        } else {
+          instance.defaultCallback({
+            op: 'add',
+            path: destinationPropKey,
+            value: newValue
+          });
+        }
+        return Reflect.set(target, key, newValue);
+      } else {
+        instance.defaultCallback({
+          op: 'replace',
+          path: destinationPropKey,
+          value: newValue
+        });
+        return Reflect.set(target, key, newValue);
+      }
+    } else {
+      instance.defaultCallback({
+        op: 'add',
+        path: destinationPropKey,
+        value: newValue
+      });
+      return Reflect.set(target, key, newValue);
+    }
+  }
+  /**
+   * A callback to be used as th proxy delete trap callback.
+   * It updates parenthood map if needed, calls default callbacks with the changes occurred.
+   * @param {JSONPatcherProxy} instance JSONPatcherProxy instance
+   * @param {Object} target the effected object
+   * @param {String} key the effected property's name
+   */
+  function deleteTrap(instance, target, key) {
+    if (typeof target[key] !== 'undefined') {
+      const parentPath = findObjectPath(instance, target);
+
+      const destinationPropKey = parentPath + '/' + escapePathComponent(key);
+
+      instance.defaultCallback({
+        op: 'remove',
+        path: destinationPropKey
+      });
+      const revokableProxyInstance = instance.proxifiedObjectsMap.get(
+        target[key]
+      );
+
+      if (revokableProxyInstance) {
+        if (revokableProxyInstance.inherited) {
+          /*
+            this is an inherited proxy (an already proxified object that was moved around), 
+            we shouldn't revoke it, because even though it was removed from path1, it is indeed used in path2.
+            And we know that because we mark moved proxies with `inherited` flag when we move them
+
+            it is a good idea to remove this flag if we come across it here, in deleteProperty trap.
+            We DO want to revoke the proxy if it was removed again.
+          */
+          revokableProxyInstance.inherited = false;
+        } else {
+          instance.parenthoodMap.delete(revokableProxyInstance.originalObject);
+          instance.disableTrapsForProxy(revokableProxyInstance);
+          instance.proxifiedObjectsMap.delete(target[key]);
+        }
+      }
+    }
+    return Reflect.deleteProperty(target, key);
+  }
+  /* pre-define resume and pause functions to enhance constructors performance */
+  function resume() {
+    this.defaultCallback = operation => {
+      this.isRecording && this.patches.push(operation);
+      this.userCallback && this.userCallback(operation);
+    };
+    this.isObserving = true;
+  }
+  function pause() {
+    this.defaultCallback = () => {};
+    this.isObserving = false;
   }
   /**
     * Creates an instance of JSONPatcherProxy around your object of interest `root`. 
     * @param {Object|Array} root - the object you want to wrap
-    * @param {Boolean} [showDetachedWarning] - whether to log a warning when a detached sub-object is modified @see {@link https://github.com/Palindrom/JSONPatcherProxy#detached-objects} 
+    * @param {Boolean} [showDetachedWarning = true] - whether to log a warning when a detached sub-object is modified @see {@link https://github.com/Palindrom/JSONPatcherProxy#detached-objects} 
     * @returns {JSONPatcherProxy}
     * @constructor
     */
@@ -33,7 +236,7 @@ const JSONPatcherProxy = (function() {
     this.isProxifyingTreeNow = false;
     this.isObserving = false;
     this.proxifiedObjectsMap = new Map();
-    this.objectsPathsMap = new Map();
+    this.parenthoodMap = new Map();
     // default to true
     if (typeof showDetachedWarning !== 'boolean') {
       showDetachedWarning = true;
@@ -48,278 +251,57 @@ const JSONPatcherProxy = (function() {
      * @memberof JSONPatcherProxy
      * Restores callback back to the original one provided to `observe`.
      */
-    this.resume = () => {
-      this.defaultCallback = operation => {
-        this.isRecording && this.patches.push(operation);
-        this.userCallback && this.userCallback(operation);
-      };
-      this.isObserving = true;
-    };
+    this.resume = resume.bind(this);
     /**
      * @memberof JSONPatcherProxy
      * Replaces your callback with a noop function.
      */
-    this.pause = () => {
-      this.defaultCallback = () => {};
-      this.isObserving = false;
-    };
+    this.pause = pause.bind(this);
   }
-  /**
-  * Deep clones your object and returns a new object.
-  */
-  JSONPatcherProxy.deepClone = function(obj) {
-    switch (typeof obj) {
-      case 'object':
-        return JSON.parse(JSON.stringify(obj)); //Faster than ES5 clone - http://jsperf.com/deep-cloning-of-objects/5
-      case 'undefined':
-        return null; //this is how JSON.stringify behaves for array items
-      default:
-        return obj; //no need to clone primitives
-    }
-  };
-  JSONPatcherProxy.escapePathComponent = function(str) {
-    if (str.indexOf('/') === -1 && str.indexOf('~') === -1) return str;
-    return str.replace(/~/g, '~0').replace(/\//g, '~1');
-  };
-  /**
-    * A helper function that retrieves the object path from object paths map. 
-    * And if it failed to find it, it sets it for future retrieval.
-    * @param {Object} target the object that you need its path
-    * @param {String} string the path used when object is not found in object-path cache
-  */
-  JSONPatcherProxy.prototype.getOrSetObjectPath = function(target, path) {
-    const cachedPath = this.objectsPathsMap.get(target);
-    if (cachedPath) {
-      return cachedPath;
-    } else {
-      this.objectsPathsMap.set(target, path);
-      return path;
-    }
-  };
 
-  JSONPatcherProxy.prototype.generateProxyAtPath = function(obj, path) {
+  JSONPatcherProxy.prototype.generateProxyAtPath = function(parent, obj, path) {
     if (!obj) {
       return obj;
     }
     const instance = this;
     const traps = {
-      get: function(target, propKey, newValue) {
-        if (propKey.toString() === '_isProxified') {
-          return true; //to distinguish proxies
-        }
-        return Reflect.get(target, propKey, newValue);
-      },
-      set: function(target, key, newValue) {
-        /* each proxified object has its path cached, we need to use that instead of `path` variable
-        because at one point in the future, paths might change and we will simply update our cache instead of 
-        proxifying again.  */
-
-        var destinationPropKey =
-          instance.getOrSetObjectPath(target, path) +
-          '/' +
-          JSONPatcherProxy.escapePathComponent(key);
-
-        /* in case the set value is already proxified by a different instance of JSONPatcherProxy */
-        if (
-          newValue &&
-          newValue._isProxified &&
-          !instance.proxifiedObjectsMap.has(newValue)
-        ) {
-          newValue = JSONPatcherProxy.deepClone(newValue);
-        } else {
-          /* mark already proxified values as inherited.
-          rationale: proxy.obj1 = proxy.obj2
-          will emit
-          {op: replace, path: '/obj1', value: obj2}
-          {op: remove, path: '/obj2'}
-          
-          by default, the second operation would revoke the proxy, an this renders obj1 revoked.
-          That's why we need to remember the proxies that are inherited.
-          */
-
-          const revokableInstance = instance.proxifiedObjectsMap.get(newValue);
-
-          /*
-          Why do we need to check instance.isProxifyingTreeNow?
-
-          We need to make sure we mark revokables as inherited ONLY when we're observing,
-          because throughout the first proxification, a sub-object is proxified and then assigned to 
-          its parent object. This assignment of a pre-proxified object can fool us into thinking
-          that it's a proxified object moved around, while in fact it's the first assignment ever. 
-
-          Checking isProxifyingTreeNow ensures this is not happening in the first proxification, 
-          but in fact is is a proxified object moved around the tree
-          */
-          if (revokableInstance && !instance.isProxifyingTreeNow) {
-            revokableInstance.inherited = true;
-          }
-        }
-
-        // if the new value is an object, make sure to watch it
-        if (
-          newValue &&
-          typeof newValue === 'object' &&
-          newValue._isProxified !== true
-        ) {
-          newValue = instance._proxifyObjectTreeRecursively(
-            newValue,
-            destinationPropKey
-          );
-        }
-        if (typeof newValue === 'undefined') {
-          if (target.hasOwnProperty(key)) {
-            // when array element is set to `undefined`, should generate replace to `null`
-            if (Array.isArray(target)) {
-              //undefined array elements are JSON.stringified to `null`
-              instance.defaultCallback({
-                op: 'replace',
-                path: destinationPropKey,
-                value: null
-              });
-            } else {
-              instance.defaultCallback({
-                op: 'remove',
-                path: destinationPropKey
-              });
-            }
-            return ownReflectSet(instance, target, key, newValue);
-          } else if (!Array.isArray(target)) {
-            return ownReflectSet(instance, target, key, newValue);
-          }
-        }
-        if (Array.isArray(target) && !Number.isInteger(+key.toString())) {
-          return ownReflectSet(instance, target, key, newValue);
-        }
-        if (target.hasOwnProperty(key)) {
-          if (typeof target[key] === 'undefined') {
-            if (Array.isArray(target)) {
-              instance.defaultCallback({
-                op: 'replace',
-                path: destinationPropKey,
-                value: newValue
-              });
-            } else {
-              instance.defaultCallback({
-                op: 'add',
-                path: destinationPropKey,
-                value: newValue
-              });
-            }
-            return ownReflectSet(instance, target, key, newValue);
-          } else {
-            instance.defaultCallback({
-              op: 'replace',
-              path: destinationPropKey,
-              value: newValue
-            });
-            return ownReflectSet(instance, target, key, newValue);
-          }
-        } else {
-          instance.defaultCallback({
-            op: 'add',
-            path: destinationPropKey,
-            value: newValue
-          });
-          return ownReflectSet(instance, target, key, newValue);
-        }
-      }, 
-      deleteProperty: function(target, key) {
-        if (typeof target[key] !== 'undefined') {
-          instance.defaultCallback({
-            op: 'remove',
-            path:
-              path + '/' + JSONPatcherProxy.escapePathComponent(key.toString())
-          });
-          const revokableProxyInstance = instance.proxifiedObjectsMap.get(
-            target[key]
-          );
-
-          if (revokableProxyInstance) {
-            if (revokableProxyInstance.inherited) {
-              /* this is an inherited proxy (an already proxified object that was moved around), 
-              we shouldn't revoke it, because even though it was removed from path1, it is indeed used in path2.
-              And we know that because we mark moved proxies with `inherited` flag when we move them
-              
-              it is a good idea to remove this flag if we come across it here, in deleteProperty trap.
-              We DO want to revoke the proxy if it was removed again.
-              */
-
-              revokableProxyInstance.inherited = false;
-            } else {
-              instance.objectsPathsMap.delete(
-                revokableProxyInstance.originalObject
-              );
-              instance.disableTrapsForProxy(revokableProxyInstance);
-              instance.proxifiedObjectsMap.delete(target[key]);
-            }
-          }
-        }
-        const result = Reflect.deleteProperty(target, key);
-        /* we need the Reflection to occur before we map paths to their object */
-        instance._resetCachedProxiesPaths(instance.cachedProxy, '');
-        return result;
-      }
+      set: (target, key, value, receiver) =>
+        setTrap(instance, target, key, value, receiver),
+      deleteProperty: (target, key) => deleteTrap(instance, target, key)
     };
     const revocableInstance = Proxy.revocable(obj, traps);
     // cache traps object to disable them later.
     revocableInstance.trapsInstance = traps;
     revocableInstance.originalObject = obj;
+
+    /* keeping track of object's parent and path */
+
+    this.parenthoodMap.set(obj, { parent, path });
+
     /* keeping track of all the proxies to be able to revoke them later */
     this.proxifiedObjectsMap.set(revocableInstance.proxy, revocableInstance);
     return revocableInstance.proxy;
   };
-  //grab tree's leaves one by one, encapsulate them into a proxy and return
+  // grab tree's leaves one by one, encapsulate them into a proxy and return
   JSONPatcherProxy.prototype._proxifyObjectTreeRecursively = function(
+    parent,
     root,
     path
   ) {
     for (let key in root) {
       if (root.hasOwnProperty(key)) {
-        if (typeof root[key] === 'object') {
-          const destinationPropKey =
-            path + '/' + JSONPatcherProxy.escapePathComponent(key);
-          root[key] = this.generateProxyAtPath(root[key], destinationPropKey);
-          this._proxifyObjectTreeRecursively(root[key], destinationPropKey);
+        if (root[key] instanceof Object) {
+          root[key] = this._proxifyObjectTreeRecursively(
+            root,
+            root[key],
+            escapePathComponent(key)
+          );
         }
       }
     }
-    return this.generateProxyAtPath(root, path);
+    return this.generateProxyAtPath(parent, root, path);
   };
-  /** 
-    A function that recursively traverses the proxy tree and caches all its proxy-object-children in a map
-    @param {Proxy} root the proxy object
-  */
-  JSONPatcherProxy.prototype._resetCachedProxiesPaths = function(root, path) {
-    /* deleting array elements could render other array elements paths incorrect, 
-    this function fixes all incorrect paths efficiently */
-    for (let key in root) {
-      if (!root.hasOwnProperty(key)) continue;
-      const subObject = root[key];
-      if (subObject && subObject._isProxified) {
-        const destinationPropKey =
-          path + '/' + JSONPatcherProxy.escapePathComponent(key);
-
-        // get the proxy instance (an instance is {proxy, originalObject})
-        var revokableProxyInstance = this.proxifiedObjectsMap.get(subObject);
-        if (revokableProxyInstance) {
-          // get the un-proxified originalObject, we need because `set` trap passes the original object as target
-          const originalObject = revokableProxyInstance.originalObject;
-          // update its path
-          this.objectsPathsMap.set(originalObject, destinationPropKey);
-        }
-        /* Even though we didn't find the proxy in the proxies-cache,
-         We need to continue updating its descendants' paths,
-         because we might come at this point in recursive calls inside `set` trap.
-         Because we cache the proxy (revokableInstance) to proxies map only **after** the revokableInstance is created.
-         And `set` trap can call this function before revokableInstance is created.
-         This means we can come across totally valid proxies that are not cached in the our cache.
-         We continue traversing them because we know 100% they're proxies (they have _isProxified = true).
-         */
-        this._resetCachedProxiesPaths(subObject, destinationPropKey);
-      }
-    }
-  };
-  //this function is for aesthetic purposes
+  // this function is for aesthetic purposes
   JSONPatcherProxy.prototype.proxifyObjectTree = function(root) {
     /*
     while proxyifying object tree,
@@ -330,7 +312,11 @@ const JSONPatcherProxy = (function() {
     */
     this.pause();
     this.isProxifyingTreeNow = true;
-    const proxifiedObject = this._proxifyObjectTreeRecursively(root, '');
+    const proxifiedObject = this._proxifyObjectTreeRecursively(
+      undefined,
+      root,
+      ''
+    );
     /* OK you can record now */
     this.isProxifyingTreeNow = false;
     this.resume();
@@ -385,7 +371,7 @@ const JSONPatcherProxy = (function() {
       throw new Error('You need to either record changes or pass a callback');
     }
     this.isRecording = record;
-    if (callback) this.userCallback = callback;
+    this.userCallback = callback;
     /*
     I moved it here to remove it from `unobserve`,
     this will also make the constructor faster, why initiate
@@ -393,7 +379,6 @@ const JSONPatcherProxy = (function() {
     They might need to use only a callback.
     */
     if (record) this.patches = [];
-    this.originalObject = JSONPatcherProxy.deepClone(this.originalObject);
     this.cachedProxy = this.proxifyObjectTree(this.originalObject);
     return this.cachedProxy;
   };

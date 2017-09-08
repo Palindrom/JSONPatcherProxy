@@ -105,11 +105,12 @@ describe('proxy', function() {
 
       observedObj.firstName = 'Joachim';
       observedObj.lastName = 'Wester';
+
       observedObj.phoneNumbers[0].number = '123';
       observedObj.phoneNumbers[1].number = '456';
-
+   
       var patches = jsonPatcherProxy.generate();
-
+  
       var obj2 = {
         firstName: 'Albert',
         lastName: 'Einstein',
@@ -372,6 +373,7 @@ describe('proxy', function() {
       var jsonPatcherProxy = new JSONPatcherProxy(arr);
       var observedArr = jsonPatcherProxy.observe(true);
 
+      
       observedArr.push({
         id: 2,
         name: 'Jerry'
@@ -404,8 +406,10 @@ describe('proxy', function() {
           value: 3
         }
       ]);
+            
 
       observedArr[1].id = 4;
+
 
       patches = jsonPatcherProxy.generate();
 
@@ -471,6 +475,7 @@ describe('proxy', function() {
       observedObj.phoneNumbers.pop(1);
 
       var patches = jsonPatcherProxy.generate();
+
       var obj2 = {
         lastName: 'Einstein',
         firstName: 'Albert',
@@ -1030,47 +1035,6 @@ describe('proxy', function() {
       var lastPatches,
         called = 0;
 
-      // ugly migration from Jasmine 1.x to > 2.0
-      function patchesChanged(time) {
-        switch (time) {
-          case 1:
-            expect(called).toReallyEqual(1);
-            expect(lastPatches).toReallyEqual([
-              {
-                op: 'replace',
-                path: '/phoneNumbers/0/number',
-                value: '123'
-              }
-            ]);
-
-            obj.phoneNumbers[1].number = '456';
-            break;
-          case 2:
-            expect(called).toReallyEqual(2);
-            expect(lastPatches).toReallyEqual([
-              {
-                op: 'replace',
-                path: '/phoneNumbers/1/number',
-                value: '456'
-              }
-            ]); //first patch should NOT be reported again here
-
-            expect(obj).toReallyEqual({
-              firstName: 'Albert',
-              lastName: 'Einstein',
-              phoneNumbers: [
-                {
-                  number: '123'
-                },
-                {
-                  number: '456'
-                }
-              ]
-            }); //objects should be still the same
-            break;
-        }
-      }
-
       var obj = {
         firstName: 'Albert',
         lastName: 'Einstein',
@@ -1085,19 +1049,51 @@ describe('proxy', function() {
       };
       var jsonPatcherProxy = new JSONPatcherProxy(obj);
 
-      var observedObj = jsonPatcherProxy.observe(true, function(patches) {
-        called++;
-        lastPatches = [patches];
-        patchesChanged(called);
-      });
-      observedObj.phoneNumbers[0].number = '123';
-    });
+      var observedObj = jsonPatcherProxy.observe(true);
 
+      observedObj.phoneNumbers[0].number = '123';
+
+      patches = jsonPatcherProxy.generate()
+      expect(patches.length).toReallyEqual(1);
+
+      expect(patches).toReallyEqual([
+        {
+          op: 'replace',
+          path: '/phoneNumbers/0/number',
+          value: '123'
+        }
+      ]);
+
+      observedObj.phoneNumbers[1].number = '456';
+      
+      patches = jsonPatcherProxy.generate()
+      expect(patches.length).toReallyEqual(1);
+
+      expect(patches).toReallyEqual([
+        {
+          op: 'replace',
+          path: '/phoneNumbers/1/number',
+          value: '456'
+        }
+      ]); //first patch should NOT be reported again here
+      
+      expect(observedObj).toReallyEqual({
+        firstName: 'Albert',
+        lastName: 'Einstein',
+        phoneNumbers: [
+          {
+            number: '123'
+          },
+          {
+            number: '456'
+          }
+        ]
+      });
+    });
     it('generate should execute callback synchronously', function() {
       var lastPatches,
         called = 0,
         res;
-
       var obj = {
         firstName: 'Albert',
         lastName: 'Einstein',
@@ -1146,56 +1142,7 @@ describe('proxy', function() {
       // }, 100);
     });
   });
-  describe('Already proxified values', function() {
-    it("shouldn't re-proxify (it should deep clone) proxified values from different instances", function() {
-
-      var obj = {
-        one: [1, 2, 3, 4, 5],
-        two: [6, 7, 6, 5, 4]
-      };
-
-      var countOne = 0;
-      var observedObjOne = new JSONPatcherProxy(obj).observe(true, function() {
-        countOne++;
-      });
-
-      var countTwo = 0;
-      var observedObjTwo = new JSONPatcherProxy(obj).observe(true, function() {
-        countTwo++;
-      });
-
-      //control test, to make sure tests are correct
-      expect(countOne).toReallyEqual(0);
-      observedObjOne.one[0] = 100;
-      expect(countOne).toReallyEqual(1);
-
-      // isolate the proxified array
-      var observedArray = observedObjOne.one;
-
-      // change the proxified array
-      observedArray[1] = 200;
-
-      // expect a patch
-      expect(countOne).toReallyEqual(2);
-
-      // make sure second observer never went off
-      expect(countTwo).toReallyEqual(0);
-
-      // add an already proxified array 
-      observedObjTwo.three = observedArray;
-
-      // expect a patch from second observer (add /three)
-      expect(countTwo).toReallyEqual(1);
-
-      //change the array in second observer
-      observedObjTwo.three[2] = 100;
-
-      // expect a patch from second observer (replace /three/2/)
-      expect(countTwo).toReallyEqual(2);
-
-      // first observer should NOT emit a patch
-      expect(countOne).toReallyEqual(2);      
-    });
+  describe('Already proxified values', function() {   
     it("Shifting an array should refresh path correctly", function() {
 
       var obj = {
@@ -1240,8 +1187,8 @@ describe('proxy', function() {
       expect(args).toEqual({ op:"replace", path: "/arrayOfArrays/1/0/item2", value: "item2 modified"});
 
       //remove first array element
-      observedObj.arrayOfArrays.shift();
 
+      observedObj.arrayOfArrays.shift();
 
       item2reference.item2 = 'item2 modified again';
 
