@@ -109,22 +109,23 @@ const JSONPatcherProxy = (function() {
     }
     if (typeof newValue == 'undefined') {
       let reflectionResult;
+      let operation;
       if (target.hasOwnProperty(key)) {
         // when array element is set to `undefined`, should generate replace to `null`
         if (Array.isArray(target)) {
           reflectionResult = Reflect.set(target, key, newValue);
           //undefined array elements are JSON.stringified to `null`
-          instance.defaultCallback({
+          operation = {
             op: 'replace',
             path: destinationPropKey,
             value: null
-          });
+          };
         } else {
           reflectionResult = Reflect.set(target, key, newValue);
-          instance.defaultCallback({
+          operation = {
             op: 'remove',
             path: destinationPropKey
-          });
+          };
         }
         const oldValue = instance.proxifiedObjectsMap.get(target[key]);
         // was the deleted a proxified object?
@@ -133,6 +134,7 @@ const JSONPatcherProxy = (function() {
           instance.disableTrapsForProxy(oldValue);
           instance.proxifiedObjectsMap.delete(oldValue);
         }
+        instance.defaultCallback(operation);
         return reflectionResult;
       } else if (!Array.isArray(target)) {
         return Reflect.set(target, key, newValue);
@@ -143,40 +145,46 @@ const JSONPatcherProxy = (function() {
       return Reflect.set(target, key, newValue);
     }
     let reflectionResult;
+    let operation;
     if (target.hasOwnProperty(key)) {
       if (typeof target[key] == 'undefined') {
         if (Array.isArray(target)) {
           reflectionResult = Reflect.set(target, key, newValue);
-          instance.defaultCallback({
+          operation = {
             op: 'replace',
             path: destinationPropKey,
             value: newValue
-          });
+          };
         } else {
           reflectionResult = Reflect.set(target, key, newValue);
-          instance.defaultCallback({
+          operation = {
             op: 'add',
             path: destinationPropKey,
             value: newValue
-          });
+          };
         }
+        instance.defaultCallback(operation);
         return reflectionResult;
       } else {
         reflectionResult = Reflect.set(target, key, newValue);
-        instance.defaultCallback({
-          op: 'replace',
-          path: destinationPropKey,
-          value: newValue
-        });
+        instance.defaultCallback(
+          /* operation = */ {
+            op: 'replace',
+            path: destinationPropKey,
+            value: newValue
+          }
+        );
         return reflectionResult;
       }
     } else {
       reflectionResult = Reflect.set(target, key, newValue);
-      instance.defaultCallback({
-        op: 'add',
-        path: destinationPropKey,
-        value: newValue
-      });
+      instance.defaultCallback(
+        /* operation = */ {
+          op: 'add',
+          path: destinationPropKey,
+          value: newValue
+        }
+      );
       return reflectionResult;
     }
   }
