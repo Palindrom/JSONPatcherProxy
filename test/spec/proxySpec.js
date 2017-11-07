@@ -1087,11 +1087,11 @@ describe('proxy', function() {
               firstName: 'Albert'
             };
             var jsonPatcherProxy = new JSONPatcherProxy(obj);
-            var observedObj = jsonPatcherProxy.observe(true);
 
-            jsonPatcherProxy.observe(true, function(_patches) {
+            var observedObj = jsonPatcherProxy.observe(true, function(_patches) {
               expect(observedObj.lastName).toReallyEqual('Newton');
             });
+
             observedObj.lastName = 'Newton';
           });
 
@@ -1100,11 +1100,11 @@ describe('proxy', function() {
               firstName: 'Albert'
             };
             var jsonPatcherProxy = new JSONPatcherProxy(obj);
-            var observedObj = jsonPatcherProxy.observe(true);
 
-            jsonPatcherProxy.observe(true, function(_patches) {
+            var observedObj = jsonPatcherProxy.observe(true, function(_patches) {
               expect(observedObj.firstName).toReallyEqual('Joachim');
             });
+
             observedObj.firstName = 'Joachim';
           });
 
@@ -1113,11 +1113,11 @@ describe('proxy', function() {
               firstName: 'Albert'
             };
             var jsonPatcherProxy = new JSONPatcherProxy(obj);
-            var observedObj = jsonPatcherProxy.observe(true);
 
-            jsonPatcherProxy.observe(true, function(_patches) {
+            var observedObj = jsonPatcherProxy.observe(true, function(_patches) {
               expect(observedObj.firstName).toReallyEqual(undefined);
             });
+
             delete observedObj.firstName;
           });
         });
@@ -1128,11 +1128,11 @@ describe('proxy', function() {
               numbers: [1, 2, 3]
             };
             var jsonPatcherProxy = new JSONPatcherProxy(obj);
-            var observedObj = jsonPatcherProxy.observe(true);
 
-            jsonPatcherProxy.observe(true, function(_patches) {
+            var observedObj = jsonPatcherProxy.observe(true, function(_patches) {
               expect(observedObj.numbers[3]).toReallyEqual(4);
             });
+
             observedObj.numbers.push(4);
           });
 
@@ -1142,11 +1142,11 @@ describe('proxy', function() {
               numbers: [1, 2, 3]
             };
             var jsonPatcherProxy = new JSONPatcherProxy(obj);
-            var observedObj = jsonPatcherProxy.observe(true);
 
-            jsonPatcherProxy.observe(true, function(_patches) {
+            var observedObj = jsonPatcherProxy.observe(true, function(_patches) {
               expect(observedObj.numbers[0]).toReallyEqual(100);
             });
+            
             observedObj.numbers[0] = 100;
           });
 
@@ -1156,9 +1156,8 @@ describe('proxy', function() {
               numbers: [1, 2, 3]
             };
             var jsonPatcherProxy = new JSONPatcherProxy(obj);
-            var observedObj = jsonPatcherProxy.observe(true);
 
-            jsonPatcherProxy.observe(true, function(_patches) {
+            var observedObj = jsonPatcherProxy.observe(true, function(_patches) {
               expect(observedObj.numbers[0]).toReallyEqual(2);
             });
 
