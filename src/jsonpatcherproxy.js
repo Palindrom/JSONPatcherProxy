@@ -107,25 +107,21 @@ const JSONPatcherProxy = (function() {
       });
       newValue = instance._proxifyObjectTreeRecursively(target, newValue, key);
     }
+    // let's start with this operation, and may or may not update it later
+    const operation = {
+      op: 'remove',
+      path: destinationPropKey
+    };
     if (typeof newValue == 'undefined') {
-      let reflectionResult;
-      let operation;
-      if (target.hasOwnProperty(key)) {
+      // applying De Morgan's laws would be a tad faster, but less readable
+      if (!Array.isArray(target) && !target.hasOwnProperty(key)) {
+        // `undefined` is being set to an already undefined value, keep silent
+        return Reflect.set(target, key, newValue);
+      } else {
         // when array element is set to `undefined`, should generate replace to `null`
         if (Array.isArray(target)) {
-          reflectionResult = Reflect.set(target, key, newValue);
-          //undefined array elements are JSON.stringified to `null`
-          operation = {
-            op: 'replace',
-            path: destinationPropKey,
-            value: null
-          };
-        } else {
-          reflectionResult = Reflect.set(target, key, newValue);
-          operation = {
-            op: 'remove',
-            path: destinationPropKey
-          };
+          // undefined array elements are JSON.stringified to `null`
+          (operation.op = 'replace'), (operation.value = null);
         }
         const oldValue = instance.proxifiedObjectsMap.get(target[key]);
         // was the deleted a proxified object?
@@ -134,59 +130,23 @@ const JSONPatcherProxy = (function() {
           instance.disableTrapsForProxy(oldValue);
           instance.proxifiedObjectsMap.delete(oldValue);
         }
-        instance.defaultCallback(operation);
-        return reflectionResult;
-      } else if (!Array.isArray(target)) {
-        return Reflect.set(target, key, newValue);
-      }
-    }
-    /* array props don't emit any patches, to avoid needless `length` patches */
-    if (Array.isArray(target) && !Number.isInteger(+key.toString())) {
-      return Reflect.set(target, key, newValue);
-    }
-    let reflectionResult;
-    let operation;
-    if (target.hasOwnProperty(key)) {
-      if (typeof target[key] == 'undefined') {
-        if (Array.isArray(target)) {
-          reflectionResult = Reflect.set(target, key, newValue);
-          operation = {
-            op: 'replace',
-            path: destinationPropKey,
-            value: newValue
-          };
-        } else {
-          reflectionResult = Reflect.set(target, key, newValue);
-          operation = {
-            op: 'add',
-            path: destinationPropKey,
-            value: newValue
-          };
-        }
-        instance.defaultCallback(operation);
-        return reflectionResult;
-      } else {
-        reflectionResult = Reflect.set(target, key, newValue);
-        instance.defaultCallback(
-          /* operation = */ {
-            op: 'replace',
-            path: destinationPropKey,
-            value: newValue
-          }
-        );
-        return reflectionResult;
       }
     } else {
-      reflectionResult = Reflect.set(target, key, newValue);
-      instance.defaultCallback(
-        /* operation = */ {
-          op: 'add',
-          path: destinationPropKey,
-          value: newValue
+      if (Array.isArray(target) && !Number.isInteger(+key.toString())) {
+        /* array props (as opposed to indices) don't emit any patches, to avoid needless `length` patches */
+        return Reflect.set(target, key, newValue);
+      }
+      operation.op = 'add';
+      if (target.hasOwnProperty(key)) {
+        if (typeof target[key] !== 'undefined' || Array.isArray(target)) {
+          operation.op = 'replace'; // setting `undefined` array elements is a `replace` op
         }
-      );
-      return reflectionResult;
+      }
+      operation.value = newValue;
     }
+    const reflectionResult = Reflect.set(target, key, newValue);
+    instance.defaultCallback(operation);
+    return reflectionResult;
   }
   /**
    * A callback to be used as th proxy delete trap callback.
