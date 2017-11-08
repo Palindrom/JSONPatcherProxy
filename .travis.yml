@@ -6,5 +6,5 @@ before_script:
   - 'export PATH=$PWD/node_modules/.bin:$PATH'
 node_js: 6
 script:
-  - xvfb-run npm test
-  - xvfb-run npm run bench
+  - npm run test
+  - npm run bench
