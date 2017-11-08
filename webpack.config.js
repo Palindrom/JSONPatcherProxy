@@ -1,6 +1,9 @@
 const webpack = require('webpack');
 const MinifyPlugin = require('babel-minify-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+const version = require('./package.json').version;
+
+const banner = `JSONPatcherProxy version: ${version}`
 
 module.exports = [
   {
@@ -12,10 +15,25 @@ module.exports = [
     },
     plugins: [
       new MinifyPlugin(),
-      // src file can be used in production everywhere
-      new CopyWebpackPlugin([
-        { from: './src/jsonpatcherproxy.js', to: './dist/jsonpatcherproxy.js' }
-      ])
+      new webpack.BannerPlugin({
+        banner
+      })
+    ],
+    resolve: {
+      extensions: ['.js']
+    }
+  },
+  {
+    entry: './src/jsonpatcherproxy.js',
+    output: {
+      filename: 'dist/jsonpatcherproxy.js',
+      library: 'JSONPatcherProxy',
+      libraryTarget: 'var'
+    },
+    plugins: [
+      new webpack.BannerPlugin({
+        banner
+      })
     ],
     resolve: {
       extensions: ['.js']

@@ -7,7 +7,8 @@
   "scripts": {
     "build": "webpack",
     "bench": "node test/spec/proxyBenchmark.js",
-    "test": "jasmine DUPLEX=proxy JASMINE_CONFIG_PATH=test/jasmine.json"
+    "test": "jasmine DUPLEX=proxy JASMINE_CONFIG_PATH=test/jasmine.json",
+    "version": "webpack && git add -A"
   },
   "keywords": [
     "proxy",

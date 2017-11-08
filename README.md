@@ -169,6 +169,10 @@ npm test
 * Run `npm test` to make sure tests pass before touching the code.
 * Modify, test again, push, and send a PR!
 
+## Bumping the version
+
+Version bumping is automated. Just use [`npm version`](https://docs.npmjs.com/cli/version) command and all files will be updated with the new version.
+
 ## License
 
 MIT
