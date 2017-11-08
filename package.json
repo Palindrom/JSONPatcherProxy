@@ -5,6 +5,7 @@
   "main": "src/jsonpatcherproxy.js",
   "typings": "index.d.ts",
   "scripts": {
+    "build": "webpack",
     "bench": "node test/spec/proxyBenchmark.js",
     "test": "jasmine DUPLEX=proxy JASMINE_CONFIG_PATH=test/jasmine.json"
   },
@@ -19,8 +20,10 @@
   },
   "license": "MIT",
   "devDependencies": {
+    "babel-minify-webpack-plugin": "^0.2.0",
     "benchmark": "^2.1.3",
     "chalk": "^1.1.3",
+    "copy-webpack-plugin": "^4.2.0",
     "fast-json-patch": "^1.1.6",
     "jasmine": "^2.5.3",
     "jsdom": "^9.11.0",
