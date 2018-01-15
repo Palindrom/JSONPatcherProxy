@@ -8,9 +8,101 @@
 
 /** Class representing a JS Object observer  */
 const JSONPatcherProxy = (function() {
+  function proxify(object, onChange) {
+    var tempPath = [];
+
+    const handler = {
+      get(target, property, receiver) {
+        if (Array.isArray(target) && 'length' === property.toString()) {
+          return Reflect.get(target, property, receiver);
+        }
+        if (
+          Array.isArray(target) &&
+          target[property] === Array.prototype[property]
+        ) {
+          return Reflect.get(target, property, receiver);
+        }
+
+        try {
+          if (property === 'prototype') {
+            return Reflect.get(target, property, receiver);
+          }
+          const p = new Proxy(target[property], handler);
+          tempPath.push(escapePathComponent(property));
+          return p;
+        } catch (err) {
+          //tempPath = [];
+          return Reflect.get(target, property, receiver);
+        }
+      },
+      defineProperty(target, property, descriptor) {
+        if (Array.isArray(target) && 'length' === property.toString()) {
+          return Reflect.defineProperty(target, property, descriptor);
+        }
+        tempPath.push(escapePathComponent(property));
+        const propExists = target.hasOwnProperty(property);
+        const propValueUndefined = typeof target[property] === 'undefined';
+        const reflectionResult = Reflect.defineProperty(
+          target,
+          property,
+          descriptor
+        );
+        let opName = 'add';
+        if (propExists) {
+          if (propValueUndefined) {
+            if (Array.isArray(target)) {
+              opName = 'replace';
+            } else {
+              opName = 'add';
+            }
+          } else {
+            opName = 'replace';
+          }
+        }
+        let op = {
+          op: opName,
+          path: '/' + tempPath.join('/')
+        };
+        if (typeof target[property] === 'undefined') {
+          if (!propExists) {
+            return reflectionResult;
+          }
+          if (Array.isArray(target)) {
+            op.op = 'replace';
+            op.value = null;
+          } else {
+            op.op = 'remove';
+          }
+        } else {
+          op.value = target[property];
+        }
+        onChange(op);
+        tempPath = [];
+
+        return reflectionResult;
+      },
+      deleteProperty(target, property) {
+        const propValueUndefined = typeof target[property] === 'undefined';
+        if (property === tempPath[tempPath.length - 1]) {
+          tempPath.pop();
+        }
+        tempPath.push(escapePathComponent(property));
+        const reflectionResult = Reflect.deleteProperty(target, property);
+        if (propValueUndefined) {
+          return Reflect.deleteProperty(target, property);
+        }
+        onChange({ op: 'remove', path: '/' + tempPath.join('/') });
+        tempPath = [];
+        return reflectionResult;
+      }
+    };
+
+    return new Proxy(object, handler);
+  }
+
   /**
-  * Deep clones your object and returns a new object.
-  */
+   * Deep clones your object and returns a new object.
+   */
   function deepClone(obj) {
     switch (typeof obj) {
       case 'object':
@@ -31,7 +123,7 @@ const JSONPatcherProxy = (function() {
 
   /**
    * Walk up the parenthood tree to get the path
-   * @param {JSONPatcherProxy} instance 
+   * @param {JSONPatcherProxy} instance
    * @param {Object} obj the object you need to find its path
    */
   function findObjectPath(instance, obj) {
@@ -204,12 +296,12 @@ const JSONPatcherProxy = (function() {
     this.isObserving = false;
   }
   /**
-    * Creates an instance of JSONPatcherProxy around your object of interest `root`. 
-    * @param {Object|Array} root - the object you want to wrap
-    * @param {Boolean} [showDetachedWarning = true] - whether to log a warning when a detached sub-object is modified @see {@link https://github.com/Palindrom/JSONPatcherProxy#detached-objects} 
-    * @returns {JSONPatcherProxy}
-    * @constructor
-    */
+   * Creates an instance of JSONPatcherProxy around your object of interest `root`.
+   * @param {Object|Array} root - the object you want to wrap
+   * @param {Boolean} [showDetachedWarning = true] - whether to log a warning when a detached sub-object is modified @see {@link https://github.com/Palindrom/JSONPatcherProxy#detached-objects}
+   * @returns {JSONPatcherProxy}
+   * @constructor
+   */
   function JSONPatcherProxy(root, showDetachedWarning) {
     this.isProxifyingTreeNow = false;
     this.isObserving = false;
@@ -338,26 +430,27 @@ const JSONPatcherProxy = (function() {
       delete revokableProxyInstance.trapsInstance.deleteProperty;
     }
   };
+
   /**
    * Proxifies the object that was passed in the constructor and returns a proxified mirror of it. Even though both parameters are options. You need to pass at least one of them.
    * @param {Boolean} [record] - whether to record object changes to a later-retrievable patches array.
    * @param {Function} [callback] - this will be synchronously called with every object change with a single `patch` as the only parameter.
    */
   JSONPatcherProxy.prototype.observe = function(record, callback) {
-    if (!record && !callback) {
-      throw new Error('You need to either record changes or pass a callback');
+    if (record && !callback) {
+      this.isRecording = true;
+      this.patches = [];
+      return proxify(this.originalObject, this.patches.push.bind(this.patches));
+    } else if (record && callback) {
+      this.isRecording = true;
+      this.patches = [];
+      return proxify(this.originalObject, op => {
+        this.patches.push(op);
+        callback(op);
+      });
+    } else {
+      return proxify(this.originalObject, callback);
     }
-    this.isRecording = record;
-    this.userCallback = callback;
-    /*
-    I moved it here to remove it from `unobserve`,
-    this will also make the constructor faster, why initiate
-    the array before they decide to actually observe with recording?
-    They might need to use only a callback.
-    */
-    if (record) this.patches = [];
-    this.cachedProxy = this.proxifyObjectTree(this.originalObject);
-    return this.cachedProxy;
   };
   /**
    * If the observed is set to record, it will synchronously return all the patches and empties patches array.
