@@ -551,6 +551,35 @@ describe('proxy', function() {
       expect(observedObj).toEqualInJson(obj2);
     });
 
+    it('should not generate a patch when array props are added or replaced', function() {
+      var obj = [];
+      var jsonPatcherProxy = new JSONPatcherProxy(obj);
+      var observedObj = jsonPatcherProxy.observe(true);
+
+      observedObj.lastName = 'Wester';
+
+      var patches = jsonPatcherProxy.generate();
+      expect(patches).toReallyEqual([]);
+
+      observedObj.lastName = 'Wester Jr.';
+
+      var patches = jsonPatcherProxy.generate();
+      expect(patches).toReallyEqual([]);
+    });
+
+    it('should not generate a patch when array props are added or replaced - and log a warning', function() {
+      
+      var obj = [];
+      var jsonPatcherProxy = new JSONPatcherProxy(obj);
+      var observedObj = jsonPatcherProxy.observe(true);
+
+      spyOn(console, 'warn');
+
+      observedObj.lastName = 'Wester';
+
+      expect(console.warn).toHaveBeenCalledWith('JSONPatcherProxy noticed a non-integer prop was set for an array. This will not emit a patch');
+    });
+
     it('should not generate the same patch twice (replace)', function() {
       var obj = {
         lastName: 'Einstein'
