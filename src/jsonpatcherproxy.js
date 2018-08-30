@@ -134,7 +134,7 @@ const JSONPatcherProxy = (function() {
     } else {
       if (Array.isArray(target) && !Number.isInteger(+key.toString())) {
         /* array props (as opposed to indices) don't emit any patches, to avoid needless `length` patches */
-        if(key.toString() !== 'length') {
+        if(key != 'length') {
           console.warn('JSONPatcherProxy noticed a non-integer prop was set for an array. This will not emit a patch');
         }
         return Reflect.set(target, key, newValue);
