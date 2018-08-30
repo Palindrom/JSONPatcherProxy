@@ -1,4 +1,4 @@
-/*! JSONPatcherProxy version: 0.0.9 */
+/*! JSONPatcherProxy version: 0.0.10 */
 var JSONPatcherProxy =
 /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
@@ -209,6 +209,9 @@ const JSONPatcherProxy = (function() {
     } else {
       if (Array.isArray(target) && !Number.isInteger(+key.toString())) {
         /* array props (as opposed to indices) don't emit any patches, to avoid needless `length` patches */
+        if(key != 'length') {
+          console.warn('JSONPatcherProxy noticed a non-integer prop was set for an array. This will not emit a patch');
+        }
         return Reflect.set(target, key, newValue);
       }
       operation.op = 'add';
