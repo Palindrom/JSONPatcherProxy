@@ -40,7 +40,7 @@ declare class JSONPatcherProxy {
     * @returns {JSONPatcherProxy}
     * @constructor
     */
-    constructor(root: any, showDetachedWarning: boolean = true);
+    constructor(root: any, showDetachedWarning?: boolean);
     /**
      * Proxifies the object that was passed in the constructor and returns a proxified mirror of it.
      * @param {Boolean} record - whether to record object changes to a later-retrievable patches array.
