@@ -8,7 +8,7 @@
 import { Operation } from 'fast-json-patch';
 
 /** Class representing a JS Object observer  */
-declare class JSONPatcherProxy {
+declare class JSONPatcherProxy<T> {
     /**
     * Deep clones your object and returns a new object.
     */
@@ -42,7 +42,7 @@ declare class JSONPatcherProxy {
     * @returns {JSONPatcherProxy}
     * @constructor
     */
-    constructor(root: any, showDetachedWarning: boolean = true);
+    constructor(root: T, showDetachedWarning?: boolean);
     /**
      * Proxifies the object that was passed in the constructor and returns a proxified mirror of it.
      * @param {Boolean} record - whether to record object changes to a later-retrievable patches array.
@@ -57,7 +57,7 @@ declare class JSONPatcherProxy {
      * @param {Boolean} record - whether to record object changes to a later-retrievable patches array.
      * @param {Function} [callback] - this will be synchronously called with every object change with a single `patch` as the only parameter.
      */
-    public observe(record: Boolean, callback: (patch: Operation) => any): any;
+    public observe(record: Boolean, callback?: (patch: Operation) => any): any;
     /**
      * If the observed is set to record, it will synchronously return all the patches and empties patches array.
      */
