@@ -55,7 +55,7 @@ declare class JSONPatcherProxy {
      * @param {Boolean} record - whether to record object changes to a later-retrievable patches array.
      * @param {Function} [callback] - this will be synchronously called with every object change with a single `patch` as the only parameter.
      */
-    public observe(record: Boolean, callback: Function): any;
+    public observe(record: Boolean, callback?: Function): any;
     /**
      * If the observed is set to record, it will synchronously return all the patches and empties patches array.
      */
