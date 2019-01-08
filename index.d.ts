@@ -40,7 +40,7 @@ declare class JSONPatcherProxy<T> {
     * @returns {JSONPatcherProxy}
     * @constructor
     */
-    constructor(root: T, showDetachedWarning: boolean = true);
+    constructor(root: T, showDetachedWarning?: boolean);
     /**
      * Proxifies the object that was passed in the constructor and returns a proxified mirror of it.
      * @param {Boolean} record - whether to record object changes to a later-retrievable patches array.
@@ -55,7 +55,7 @@ declare class JSONPatcherProxy<T> {
      * @param {Boolean} record - whether to record object changes to a later-retrievable patches array.
      * @param {Function} [callback] - this will be synchronously called with every object change with a single `patch` as the only parameter.
      */
-    public observe(record: Boolean, callback: Function): T;
+    public observe(record: Boolean, callback?: Function): T;
     /**
      * If the observed is set to record, it will synchronously return all the patches and empties patches array.
      */
