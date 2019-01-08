@@ -5,6 +5,8 @@
  * MIT license
  */
 
+import { Operation } from 'fast-json-patch';
+
 /** Class representing a JS Object observer  */
 declare class JSONPatcherProxy<T> {
     /**
@@ -55,10 +57,10 @@ declare class JSONPatcherProxy<T> {
      * @param {Boolean} record - whether to record object changes to a later-retrievable patches array.
      * @param {Function} [callback] - this will be synchronously called with every object change with a single `patch` as the only parameter.
      */
-    public observe(record: Boolean, callback?: Function): T;
+    public observe(record: Boolean, callback?: (patch: Operation) => any): any;
     /**
      * If the observed is set to record, it will synchronously return all the patches and empties patches array.
      */
-    public generate(): Object[];
+    public generate(): Operation[];
 }
 export default JSONPatcherProxy;
