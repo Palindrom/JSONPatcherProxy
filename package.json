@@ -6,8 +6,10 @@
   "typings": "index.d.ts",
   "scripts": {
     "build": "webpack",
+    "build-watch": "webpack --watch",
     "bench": "node test/spec/proxyBenchmark.js",
     "test": "jasmine DUPLEX=proxy JASMINE_CONFIG_PATH=test/jasmine.json",
+    "test-debug": "node --inspect-brk node_modules/jasmine/bin/jasmine.js DUPLEX=proxy JASMINE_CONFIG_PATH=test/jasmine.json",
     "version": "webpack && git add -A"
   },
   "keywords": [
@@ -21,16 +23,13 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "babel-minify-webpack-plugin": "^0.2.0",
-    "benchmark": "^2.1.3",
-    "chalk": "^1.1.3",
-    "copy-webpack-plugin": "^4.5.2",
-    "jasmine": "^2.5.3",
-    "jsdom": "^9.11.0",
-    "lodash": "^4.17.10",
-    "webpack": "^2.5.1"
-  },
-  "dependencies": {
-    "fast-json-patch": "^2.0.0"
+    "benchmark": "^2.1.4",
+    "chalk": "^2.4.2",
+    "jasmine": "^3.4.0",
+    "jsdom": "^15.1.1",
+    "fast-json-patch": "^2.1.0",
+    "lodash": "^4.17.11",
+    "webpack": "^4.32.2",
+    "webpack-cli": "^3.2.3"
   }
 }
