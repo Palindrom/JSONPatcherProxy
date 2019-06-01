@@ -4,7 +4,7 @@ dist: trusty
 before_script:
   - npm install
   - 'export PATH=$PWD/node_modules/.bin:$PATH'
-node_js: 6
+node_js: lts/*
 script:
   - npm run test
   - npm run bench
