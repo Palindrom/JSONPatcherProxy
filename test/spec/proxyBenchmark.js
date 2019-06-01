@@ -1,10 +1,11 @@
 var obj, obj2;
 
 if (typeof window === 'undefined') {
-  var jsdom = require('jsdom').jsdom;
-  var doc = jsdom(undefined, undefined);
-  global.window = doc.defaultView;
-  global.document = doc.defaultView.document;
+  const jsdom = require("jsdom");
+  const { JSDOM } = jsdom;
+  var dom = new JSDOM();
+  global.window = dom.window;
+  global.document = dom.window.document;
 }
 
 if (typeof jsonpatch === 'undefined') {
