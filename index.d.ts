@@ -13,8 +13,7 @@ declare class JSONPatcherProxy<T> {
     * Deep clones your object and returns a new object.
     */
     public static deepClone(obj);
-    private originalObject;
-    private exposedObject;
+    private originalRoot;
     private cachedProxy;
     private patches;
     private isRecording;
@@ -32,9 +31,9 @@ declare class JSONPatcherProxy<T> {
     public resume: Function;
 
     private static escapePathComponent(str);
-    private generateProxyAtPath(obj, path);
-    private _proxifyObjectTreeRecursively(root, path);
-    private proxifyObjectTree(root);
+    private _generateProxyAtKey(parent, tree, key);
+    private _proxifyTreeRecursively(parent, tree, key);
+    private proxifyRoot(root);
     /**
     * Creates an instance of JSONPatcherProxy around your object of interest, for later observe, unobserve, pause, resume calls. 
     * @param {Object|Array} root - the object you want to wrap
