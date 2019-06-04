@@ -207,6 +207,7 @@ const JSONPatcherProxy = (function() {
     this.cachedProxy = null;
     this.isRecording = false;
     this.userCallback;
+    this.defaultCallback;
   }
 
   JSONPatcherProxy.prototype._generateProxyAtKey = function(parent, tree, key) {
