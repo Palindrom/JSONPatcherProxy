@@ -185,18 +185,6 @@ const JSONPatcherProxy = (function() {
       return reflectionResult;
     }
   }
-  /* pre-define resume and pause functions to enhance constructors performance */
-  function resume() {
-    this.defaultCallback = operation => {
-      this.isRecording && this.patches.push(operation);
-      this.userCallback && this.userCallback(operation);
-    };
-    this.isObserving = true;
-  }
-  function pause() {
-    this.defaultCallback = () => {};
-    this.isObserving = false;
-  }
   /**
     * Creates an instance of JSONPatcherProxy around your object of interest `root`. 
     * @param {Object|Array} root - the object you want to wrap
@@ -219,16 +207,6 @@ const JSONPatcherProxy = (function() {
     this.cachedProxy = null;
     this.isRecording = false;
     this.userCallback;
-    /**
-     * @memberof JSONPatcherProxy
-     * Restores callback back to the original one provided to `observe`.
-     */
-    this.resume = resume.bind(this);
-    /**
-     * @memberof JSONPatcherProxy
-     * Replaces your callback with a noop function.
-     */
-    this.pause = pause.bind(this);
   }
 
   JSONPatcherProxy.prototype._generateProxyAtKey = function(parent, tree, key) {
@@ -368,6 +346,23 @@ const JSONPatcherProxy = (function() {
   JSONPatcherProxy.prototype.disableTraps = function() {
     this.treeMetadataMap.forEach(this._disableTrapsForTreeMetadata, this);
   };
+  /**
+   * Restores callback back to the original one provided to `observe`.
+   */
+  JSONPatcherProxy.prototype.resume = function() {
+    this.defaultCallback = operation => {
+      this.isRecording && this.patches.push(operation);
+      this.userCallback && this.userCallback(operation);
+    };
+    this.isObserving = true;
+  };
+  /**
+   * Replaces callback with a noop function.
+   */
+  JSONPatcherProxy.prototype.pause = function() {
+    this.defaultCallback = () => {};
+    this.isObserving = false;
+  }
   return JSONPatcherProxy;
 })();
 
