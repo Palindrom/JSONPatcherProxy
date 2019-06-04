@@ -106,14 +106,15 @@ const JSONPatcherProxy = (function() {
       op: 'remove',
       path: pathToKey
     };
+    const isTreeAnArray = Array.isArray(tree);
     if (typeof newValue == 'undefined') {
       // applying De Morgan's laws would be a tad faster, but less readable
-      if (!Array.isArray(tree) && !tree.hasOwnProperty(key)) {
+      if (!isTreeAnArray && !tree.hasOwnProperty(key)) {
         // `undefined` is being set to an already undefined value, keep silent
         return Reflect.set(tree, key, newValue);
       } else {
         // when array element is set to `undefined`, should generate replace to `null`
-        if (Array.isArray(tree)) {
+        if (isTreeAnArray) {
           // undefined array elements are JSON.stringified to `null`
           (operation.op = 'replace'), (operation.value = null);
         }
@@ -126,7 +127,7 @@ const JSONPatcherProxy = (function() {
         }
       }
     } else {
-      if (Array.isArray(tree) && !Number.isInteger(+key.toString())) {
+      if (isTreeAnArray && !Number.isInteger(+key.toString())) {
         /* array props (as opposed to indices) don't emit any patches, to avoid needless `length` patches */
         if(key != 'length') {
           console.warn('JSONPatcherProxy noticed a non-integer prop was set for an array. This will not emit a patch');
@@ -135,7 +136,7 @@ const JSONPatcherProxy = (function() {
       }
       operation.op = 'add';
       if (tree.hasOwnProperty(key)) {
-        if (typeof tree[key] !== 'undefined' || Array.isArray(tree)) {
+        if (typeof tree[key] !== 'undefined' || isTreeAnArray) {
           operation.op = 'replace'; // setting `undefined` array elements is a `replace` op
         }
       }
