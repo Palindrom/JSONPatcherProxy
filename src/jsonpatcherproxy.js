@@ -53,7 +53,7 @@ const JSONPatcherProxy = (function() {
     return '';
   }
   /**
-   * A callback to be used as th proxy set trap callback.
+   * A callback to be used as the proxy set trap callback.
    * It updates parenthood map if needed, proxifies nested newly-added objects, calls default callback with the changes occurred.
    * @param {JSONPatcherProxy} instance JSONPatcherProxy instance
    * @param {Object} tree the affected object
@@ -80,7 +80,7 @@ const JSONPatcherProxy = (function() {
     /*
     Why do we need to check instance.isProxifyingTreeNow?
 
-    We need to make sure we mark revokables as inherited ONLY when we're observing,
+    We need to make sure we mark revocables as inherited ONLY when we're observing,
     because throughout the first proxification, a sub-object is proxified and then assigned to 
     its parent object. This assignment of a pre-proxified object can fool us into thinking
     that it's a proxified object moved around, while in fact it's the first assignment ever. 
@@ -248,8 +248,8 @@ const JSONPatcherProxy = (function() {
   // this function is for aesthetic purposes
   JSONPatcherProxy.prototype._proxifyRoot = function(root) {
     /*
-    while proxyifying object tree,
-    the proxyifying operation itself is being
+    while proxifying object tree,
+    the proxifying operation itself is being
     recorded, which in an unwanted behavior,
     that's why we disable recording through this
     initial process;

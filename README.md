@@ -153,7 +153,7 @@ See the [ECMAScript spec](http://www.ecma-international.org/ecma-262/6.0/index.h
 
 1. **It mutates your original object**: During proxification, JSONPatcherProxy mutates the object you pass to it. Because it doesn't deep-clone for better performance. If you want your original object to remain untouched, please deep-clone before you pass it to the constructor.
 
-2. **It does not support multi-level proxification**: During proxification, it recursively traverses the object and sets each property to its new proxified version. This means you can't proxyify an already proxified object because the original proxy will record proxification as a series of changes. And the emitted patches are unpredictable. Also, when you change a property from either one of the proxies, both of the proxies will emit patches in an undefined manner.
+2. **It does not support multi-level proxification**: During proxification, it recursively traverses the object and sets each property to its new proxified version. This means you can't proxify an already proxified object because the original proxy will record proxification as a series of changes. And the emitted patches are unpredictable. Also, when you change a property from either one of the proxies, both of the proxies will emit patches in an undefined manner.
 
 ## Specs/tests
 

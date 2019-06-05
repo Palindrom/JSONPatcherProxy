@@ -377,8 +377,8 @@ const JSONPatcherProxy = (function() {
   // this function is for aesthetic purposes
   JSONPatcherProxy.prototype.proxifyObjectTree = function(root) {
     /*
-    while proxyifying object tree,
-    the proxyifying operation itself is being
+    while proxifying object tree,
+    the proxifying operation itself is being
     recorded, which in an unwanted behavior,
     that's why we disable recording through this
     initial process;
