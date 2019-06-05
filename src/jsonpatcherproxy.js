@@ -54,7 +54,7 @@ const JSONPatcherProxy = (function() {
   }
   /**
    * A callback to be used as th proxy set trap callback.
-   * It updates parenthood map if needed, proxifies nested newly-added objects, calls default callbacks with the changes occurred.
+   * It updates parenthood map if needed, proxifies nested newly-added objects, calls default callback with the changes occurred.
    * @param {JSONPatcherProxy} instance JSONPatcherProxy instance
    * @param {Object} tree the affected object
    * @param {String} key the effect property's name
@@ -147,7 +147,7 @@ const JSONPatcherProxy = (function() {
     return reflectionResult;
   }
   /**
-   * A callback to be used as th proxy delete trap callback.
+   * A callback to be used as the proxy delete trap callback.
    * It updates parenthood map if needed, calls default callbacks with the changes occurred.
    * @param {JSONPatcherProxy} instance JSONPatcherProxy instance
    * @param {Object} tree the effected object
@@ -165,7 +165,7 @@ const JSONPatcherProxy = (function() {
             we shouldn't revoke it, because even though it was removed from path1, it is still used in path2.
             And we know that because we mark moved proxies with `inherited` flag when we move them
 
-            it is a good idea to remove this flag if we come across it here, in deleteProperty trap.
+            it is a good idea to remove this flag if we come across it here, in trapForDeleteProperty.
             We DO want to revoke the proxy if it was removed again.
           */
           subtreeMetadata.inherited = false;
@@ -223,7 +223,7 @@ const JSONPatcherProxy = (function() {
     treeMetadata.handler = handler;
     treeMetadata.originalObject = tree;
 
-    /* keeping track of object's parent and path */
+    /* keeping track of the object's parent and the key within the parent */
     this.parenthoodMap.set(tree, { parent, key });
 
     /* keeping track of all the proxies to be able to revoke them later */
@@ -334,7 +334,7 @@ const JSONPatcherProxy = (function() {
     return this.patches.splice(0, this.patches.length);
   };
   /**
-   * Revokes all proxies rendering the observed object useless and good for garbage collection @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy/revocable}
+   * Revokes all proxies, rendering the observed object useless and good for garbage collection @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy/revocable}
    */
   JSONPatcherProxy.prototype.revoke = function() {
     this.treeMetadataMap.forEach(el => {
