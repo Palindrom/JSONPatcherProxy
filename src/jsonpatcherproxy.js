@@ -12,6 +12,11 @@
 
 /** Class representing a JS Object observer  */
 const JSONPatcherProxy = (function() {
+  function isObject(value) {
+    const type = typeof value
+    return value != null && (type == 'object' || type == 'function')
+  }
+  
   /**
   * Deep clones your object and returns a new object.
   */
@@ -34,17 +39,17 @@ const JSONPatcherProxy = (function() {
   JSONPatcherProxy.escapePathComponent = escapePathComponent;
 
   /**
-   * Walk up the parenthood tree to get the path
+   * Walk up the tree metadata to get the path
    * @param {JSONPatcherProxy} instance 
    * @param {Object} tree the object you need to find its path
    */
   function getPathToTree(instance, tree) {
     const pathComponents = [];
-    let parenthood = instance._parenthoodMap.get(tree);
-    while (parenthood && parenthood.key) {
+    let treeMetadata = instance._treeMetadataMap.get(tree);
+    while (treeMetadata && treeMetadata.keyInParent) {
       // because we're walking up-tree, we need to use the array as a stack
-      pathComponents.unshift(parenthood.key);
-      parenthood = instance._parenthoodMap.get(parenthood.parent);
+      pathComponents.unshift(treeMetadata.keyInParent);
+      treeMetadata = instance._treeMetadataMap.get(treeMetadata.parent);
     }
     if (pathComponents.length) {
       const path = pathComponents.join('/');
@@ -53,8 +58,22 @@ const JSONPatcherProxy = (function() {
     return '';
   }
   /**
+   * A callback to be used as the proxy get trap callback.
+   * It allows to check get the tree metadata from within the tree. This allows to check if the object is proxified by this
+   * instance of JSONPatcherProxy, even when all you have is a reference that is someone else's proxy
+   * @param {JSONPatcherProxy} instance JSONPatcherProxy instance
+   * @param {Object} tree the affected object
+   * @param {String} key the effect property's name
+   */
+  function trapForGet(instance, tree, key) {
+    if (key === instance._metadataSymbol) {
+      return instance._treeMetadataMap.get(tree);
+    }
+    return Reflect.get(tree, key);
+  }
+  /**
    * A callback to be used as the proxy set trap callback.
-   * It updates parenthood map if needed, proxifies nested newly-added objects, calls default callback with the changes occurred.
+   * It updates tree metadata map if needed, proxifies nested newly-added objects, calls default callback with the changes occurred.
    * @param {JSONPatcherProxy} instance JSONPatcherProxy instance
    * @param {Object} tree the affected object
    * @param {String} key the effect property's name
@@ -62,45 +81,43 @@ const JSONPatcherProxy = (function() {
    */
   function trapForSet(instance, tree, key, newValue) {
     const pathToKey = getPathToTree(instance, tree) + '/' + escapePathComponent(key);
-    const subtreeMetadata = instance._treeMetadataMap.get(newValue);
-
-    if (instance._treeMetadataMap.has(newValue)) {
-      instance._parenthoodMap.set(subtreeMetadata.originalObject, { parent: tree, key });
+    
+    if (isObject(newValue)) {
+      const subtreeMetadata = newValue[instance._metadataSymbol];
+      if (subtreeMetadata) {
+        subtreeMetadata.parent = tree;
+        subtreeMetadata.keyInParent = key;
+        /*
+            mark already proxified values as inherited.
+            rationale: proxy.arr.shift()
+            will emit
+            {op: replace, path: '/arr/1', value: arr_2}
+            {op: remove, path: '/arr/2'}
+    
+            by default, the second operation would revoke the proxy, and this renders arr revoked.
+            That's why we need to remember the proxies that are inherited.
+          */
+        /*
+        Why do we need to check instance._isProxifyingTreeNow?
+    
+        We need to make sure we mark revocables as inherited ONLY when we're observing,
+        because throughout the first proxification, a sub-object is proxified and then assigned to 
+        its parent object. This assignment of a pre-proxified object can fool us into thinking
+        that it's a proxified object moved around, while in fact it's the first assignment ever. 
+    
+        Checking _isProxifyingTreeNow ensures this is not happening in the first proxification, 
+        but in fact is is a proxified object moved around the tree
+        */
+        if (!instance._isProxifyingTreeNow) {
+          subtreeMetadata.inherited = true;
+        }
+      }
+      else {
+        // make sure to watch it
+        newValue = instance._proxifyTreeRecursively(tree, newValue, key);
+      }
     }
-    /*
-        mark already proxified values as inherited.
-        rationale: proxy.arr.shift()
-        will emit
-        {op: replace, path: '/arr/1', value: arr_2}
-        {op: remove, path: '/arr/2'}
 
-        by default, the second operation would revoke the proxy, and this renders arr revoked.
-        That's why we need to remember the proxies that are inherited.
-      */
-    /*
-    Why do we need to check instance._isProxifyingTreeNow?
-
-    We need to make sure we mark revocables as inherited ONLY when we're observing,
-    because throughout the first proxification, a sub-object is proxified and then assigned to 
-    its parent object. This assignment of a pre-proxified object can fool us into thinking
-    that it's a proxified object moved around, while in fact it's the first assignment ever. 
-
-    Checking _isProxifyingTreeNow ensures this is not happening in the first proxification, 
-    but in fact is is a proxified object moved around the tree
-    */
-    if (subtreeMetadata && !instance._isProxifyingTreeNow) {
-      subtreeMetadata.inherited = true;
-    }
-
-    // if the new value is an object, make sure to watch it
-    if (
-      newValue &&
-      typeof newValue == 'object' &&
-      !instance._treeMetadataMap.has(newValue)
-    ) {
-      instance._parenthoodMap.set(newValue, { parent: tree, key });
-      newValue = instance._proxifyTreeRecursively(tree, newValue, key);
-    }
     // let's start with this operation, and may or may not update it later
     const operation = {
       op: 'remove',
@@ -118,12 +135,10 @@ const JSONPatcherProxy = (function() {
           // undefined array elements are JSON.stringified to `null`
           (operation.op = 'replace'), (operation.value = null);
         }
-        const oldSubtreeMetadata = instance._treeMetadataMap.get(tree[key]);
+        const oldSubtreeMetadata = tree[key][instance._metadataSymbol];
         if (oldSubtreeMetadata) {
-          //TODO there is no test for this!
-          instance._parenthoodMap.delete(tree[key]);
           instance._disableTrapsForTreeMetadata(oldSubtreeMetadata);
-          instance._treeMetadataMap.delete(oldSubtreeMetadata);
+          instance._treeMetadataMap.delete(oldSubtreeMetadata.originalObject); //TODO there is no test for this
         }
       }
     } else {
@@ -148,7 +163,7 @@ const JSONPatcherProxy = (function() {
   }
   /**
    * A callback to be used as the proxy delete trap callback.
-   * It updates parenthood map if needed, calls default callbacks with the changes occurred.
+   * It updates tree metadata map if needed, calls default callbacks with the changes occurred.
    * @param {JSONPatcherProxy} instance JSONPatcherProxy instance
    * @param {Object} tree the effected object
    * @param {String} key the effected property's name
@@ -156,7 +171,7 @@ const JSONPatcherProxy = (function() {
   function trapForDeleteProperty(instance, tree, key) {
     if (typeof tree[key] !== 'undefined') {
       const pathToKey = getPathToTree(instance, tree) + '/' + escapePathComponent(key);
-      const subtreeMetadata = instance._treeMetadataMap.get(tree[key]);
+      const subtreeMetadata = tree[key][instance._metadataSymbol];
 
       if (subtreeMetadata) {
         if (subtreeMetadata.inherited) {
@@ -170,9 +185,8 @@ const JSONPatcherProxy = (function() {
           */
           subtreeMetadata.inherited = false;
         } else {
-          instance._parenthoodMap.delete(subtreeMetadata.originalObject);
           instance._disableTrapsForTreeMetadata(subtreeMetadata);
-          instance._treeMetadataMap.delete(tree[key]);
+          instance._treeMetadataMap.delete(subtreeMetadata.originalObject); //TODO this is not tested
         }
       }
       const reflectionResult = Reflect.deleteProperty(tree, key);
@@ -193,10 +207,13 @@ const JSONPatcherProxy = (function() {
     * @constructor
     */
   function JSONPatcherProxy(root, showDetachedWarning) {
+    /**
+     * Use tree[this._metadataSymbol] to access the tree metadata when all you have is a reference to a proxified version of the tree.
+     */
+    this._metadataSymbol = Symbol("Symbol for getting the tree metadata from external access.");
     this._isProxifyingTreeNow = false;
     this._isObserving = false;
     this._treeMetadataMap = new Map();
-    this._parenthoodMap = new Map();
     // default to true
     if (typeof showDetachedWarning !== 'boolean') {
       showDetachedWarning = true;
@@ -216,26 +233,26 @@ const JSONPatcherProxy = (function() {
       return tree;
     }
     const handler = {
+      get: (...args) => trapForGet(this, ...args),
       set: (...args) => trapForSet(this, ...args),
       deleteProperty: (...args) => trapForDeleteProperty(this, ...args)
     };
     const treeMetadata = Proxy.revocable(tree, handler);
     // cache the object that contains traps to disable them later.
-    treeMetadata.handler = handler;
     treeMetadata.originalObject = tree;
-
-    /* keeping track of the object's parent and the key within the parent */
-    this._parenthoodMap.set(tree, { parent, key });
+    treeMetadata.handler = handler;
+    treeMetadata.parent = parent;
+    treeMetadata.keyInParent = key;
 
     /* keeping track of all the proxies to be able to revoke them later */
-    this._treeMetadataMap.set(treeMetadata.proxy, treeMetadata);
+    this._treeMetadataMap.set(tree, treeMetadata); //the key is an UNPROXIFIED tree
     return treeMetadata.proxy;
   };
   // grab tree's leaves one by one, encapsulate them into a proxy and return
   JSONPatcherProxy.prototype._proxifyTreeRecursively = function(parent, tree, key) {
-    for (let key in tree) {
+    for (let key in tree) { //TODO this creates a new local "key" that is different to "key" argument of the function. The name of the function argument should be changed to avoid confusion
       if (tree.hasOwnProperty(key)) {
-        if (tree[key] instanceof Object) {
+        if (isObject(tree[key])) {
           tree[key] = this._proxifyTreeRecursively(
             tree,
             tree[key],
@@ -256,7 +273,7 @@ const JSONPatcherProxy = (function() {
     initial process;
     */
     this.pause();
-    this._isProxifyingTreeNow = true;
+    this._isProxifyingTreeNow = true; //TODO probably not needed, when I comment this out, all tests pass
     const proxifiedRoot = this._proxifyTreeRecursively(
       undefined,
       root,
@@ -276,13 +293,12 @@ const JSONPatcherProxy = (function() {
       const message =
         "You're accessing an object that is detached from the observedObject tree, see https://github.com/Palindrom/JSONPatcherProxy#detached-objects";
 
-      treeMetadata.handler.set = (
+      treeMetadata.handler.get = (
         parent,
-        key,
-        newValue
+        key
       ) => {
         console.warn(message);
-        return Reflect.set(parent, key, newValue);
+        return Reflect.get(parent, key);
       };
       treeMetadata.handler.set = (
         parent,
@@ -348,6 +364,7 @@ const JSONPatcherProxy = (function() {
   JSONPatcherProxy.prototype.disableTraps = function() {
     this._treeMetadataMap.forEach(this._disableTrapsForTreeMetadata, this);
   };
+
   /**
    * Restores callback back to the original one provided to `observe`.
    */
