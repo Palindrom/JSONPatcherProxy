@@ -24,16 +24,17 @@ declare class JSONPatcherProxy<T> {
      */
     constructor(root: T, showDetachedWarning?: boolean);
 
-    private isProxifyingTreeNow: boolean;
-    private isObserving: boolean;
-    private treeMetadataMap: Map<object, object>;
-    private parenthoodMap: Map<object, object>;
-    private showDetachedWarning: boolean;
-    private originalRoot: object;
-    private cachedProxy: object;
-    private isRecording: boolean;
-    private userCallback: Function;
-    private defaultCallback: Function;
+    private _isProxifyingTreeNow: boolean;
+    private _isObserving: boolean;
+    private _treeMetadataMap: Map<object, object>;
+    private _parenthoodMap: Map<object, object>;
+    private _showDetachedWarning: boolean;
+    private _originalRoot: object;
+    private _cachedProxy: object;
+    private _isRecording: boolean;
+    private _userCallback: Function;
+    private _defaultCallback: Function;
+    private _patches: Operation[];
     private _generateProxyAtKey(parent: object, tree: object, key: any): object;
     // grab tree's leaves one by one, encapsulate them into a proxy and return
     private _proxifyTreeRecursively(parent: object, tree: object, key: any): object;
