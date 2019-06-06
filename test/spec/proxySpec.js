@@ -271,6 +271,30 @@ describe('proxy', function() {
       obj2.phoneNumbers[1].number = '456';
       expect(observedObj).toReallyEqual(obj2); //objects should be still the same
     });
+    
+    it('should generate replace (deep object, proxified)', function() {
+      const obj = generateDeepObjectFixture();
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      let observedObj = jsonPatcherProxy.observe(true);
+    
+      //begin external proxification
+      observedObj = new Proxy(observedObj, {});
+      observedObj.phoneNumbers = new Proxy(observedObj.phoneNumbers, {});
+      observedObj.phoneNumbers[0] = new Proxy(observedObj.phoneNumbers[0], {});
+      observedObj.phoneNumbers[1] = new Proxy(observedObj.phoneNumbers[1], {});
+      //end external proxification
+
+      observedObj.phoneNumbers[0].number = '123';
+
+      const patches = jsonPatcherProxy.generate();
+      expect(patches).toReallyEqual([
+        {
+          op: 'replace',
+          path: '/phoneNumbers/0/number',
+          value: '123'
+        }
+      ]);
+    });
 
     it('should generate replace (changes in new array cell, primitive values)', function() {
       var arr = [1];
