@@ -1,9 +1,7 @@
-var obj, obj2;
-
 if (typeof window === 'undefined') {
   const jsdom = require("jsdom");
   const { JSDOM } = jsdom;
-  var dom = new JSDOM();
+  const dom = new JSDOM();
   global.window = dom.window;
   global.document = dom.window.document;
 }
@@ -22,10 +20,10 @@ if (typeof Benchmark === 'undefined') {
     .benchmarkResultsToConsole;
 }
 
-var suite = new Benchmark.Suite();
+const suite = new Benchmark.Suite();
 
-suite.add('jsonpatcherproxy generate operation', function() {
-  var obj = {
+function generateDeepObjectFixture() {
+  return {
     firstName: 'Albert',
     lastName: 'Einstein',
     phoneNumbers: [
@@ -36,187 +34,89 @@ suite.add('jsonpatcherproxy generate operation', function() {
         number: '45353'
       }
     ]
-  };
+  }
+}
 
-  var jsonPatcherProxy = new JSONPatcherProxy(obj);
-  var observedObj = jsonPatcherProxy.observe(true);
+function generateSmallObjectFixture() {
+  return { name: 'Tesla', speed: 100 };
+}
 
-  var patches = jsonPatcherProxy.generate();
-
-  observedObj.firstName = 'Joachim';
-  observedObj.lastName = 'Wester';
-  observedObj.phoneNumbers[0].number = '123';
-  observedObj.phoneNumbers[1].number = '456';
-});
-suite.add('jsonpatch generate operation', function() {
-  var observedObj = {
-    firstName: 'Albert',
-    lastName: 'Einstein',
-    phoneNumbers: [
-      {
-        number: '12345'
-      },
-      {
-        number: '45353'
-      }
-    ]
-  };
-  var observer = jsonpatch.observe(observedObj);
-
-  observedObj.firstName = 'Joachim';
-  observedObj.lastName = 'Wester';
-  observedObj.phoneNumbers[0].number = '123';
-  observedObj.phoneNumbers[1].number = '456';
-
-  jsonpatch.generate(observer);
-});
-
-
-
-
-
-suite.add('jsonpatcherproxy mutation - huge object', function() {
-  var singleCar = { name: 'Tesla', speed: 100 };
-
-  var obj = {
+function generateBigObjectFixture(carsSize) {
+  const obj = {
     firstName: 'Albert',
     lastName: 'Einstein',
     cars: []
   };
-
-  for (var i = 0; i < 100; i++) {
-    var copy = JSONPatcherProxy.deepClone(singleCar);
-    var temp = copy;
-    for (var j = 0; j < 5; j++) {
-      temp.temp = JSONPatcherProxy.deepClone(singleCar);
-      temp = temp.temp;
+  for (let i = 0; i < carsSize; i++) {
+    let deep = generateSmallObjectFixture();
+    obj.cars.push(deep);
+    for (let j = 0; j < 5; j++) {
+      deep.temp = generateSmallObjectFixture();
+      deep = deep.temp;
     }
-    obj.cars.push(copy);
   }
-  var jsonPatcherProxy = new JSONPatcherProxy(obj);
-  var observedObj = jsonPatcherProxy.observe(true);
+  return obj;
+}
 
+suite.add('jsonpatcherproxy generate operation', function() {
+  const obj = generateDeepObjectFixture();
+  const jsonPatcherProxy = new JSONPatcherProxy(obj);
+  const observedObj = jsonPatcherProxy.observe(true);
+  const patches = jsonPatcherProxy.generate();
+  observedObj.firstName = 'Joachim';
+  observedObj.lastName = 'Wester';
+  observedObj.phoneNumbers[0].number = '123';
+  observedObj.phoneNumbers[1].number = '456';
+});
+
+suite.add('jsonpatch generate operation', function() {
+  const obj = generateDeepObjectFixture();
+  const observer = jsonpatch.observe(obj);
+  obj.firstName = 'Joachim';
+  obj.lastName = 'Wester';
+  obj.phoneNumbers[0].number = '123';
+  obj.phoneNumbers[1].number = '456';
+  jsonpatch.generate(observer);
+});
+
+suite.add('jsonpatcherproxy mutation - huge object', function() {
+  const obj = generateBigObjectFixture(100);
+  const jsonPatcherProxy = new JSONPatcherProxy(obj);
+  const observedObj = jsonPatcherProxy.observe(true);
   observedObj.cars[50].name = 'Toyota'
 });
 
 suite.add('jsonpatch mutation - huge object', function() {
-  var singleCar = { name: 'Tesla', speed: 100 };
-
-  var obj = {
-    firstName: 'Albert',
-    lastName: 'Einstein',
-    cars: []
-  };
-
-  for (var i = 0; i < 100; i++) {
-    var copy = JSONPatcherProxy.deepClone(singleCar);
-    var temp = copy;
-    for (var j = 0; j < 5; j++) {
-      temp.temp = JSONPatcherProxy.deepClone(singleCar);
-      temp = temp.temp;
-    }
-    obj.cars.push(copy);
-  }
-
-  var observer = jsonpatch.observe(obj);
-
+  const obj = generateBigObjectFixture(100);
+  const observer = jsonpatch.observe(obj);
   obj.cars[50].name = 'Toyota';
-
   jsonpatch.generate(observer);
 });
 
 suite.add('jsonpatcherproxy generate operation - huge object', function() {
-  var singleCar = { name: 'Tesla', speed: 100 };
-
-  var obj = {
-    firstName: 'Albert',
-    lastName: 'Einstein',
-    cars: []
-  };
-
-  for (var i = 0; i < 100; i++) {
-    var copy = JSONPatcherProxy.deepClone(singleCar);
-    var temp = copy;
-    for (var j = 0; j < 5; j++) {
-      temp.temp = JSONPatcherProxy.deepClone(singleCar);
-      temp = temp.temp;
-    }
-    obj.cars.push(copy);
-  }
-  var jsonPatcherProxy = new JSONPatcherProxy(obj);
-  var observedObj = jsonPatcherProxy.observe(true);
-
+  const obj = generateBigObjectFixture(100);
+  const jsonPatcherProxy = new JSONPatcherProxy(obj);
+  const observedObj = jsonPatcherProxy.observe(true);
   observedObj.cars.shift();
 });
 
 suite.add('jsonpatch generate operation - huge object', function() {
-  var singleCar = { name: 'Tesla', speed: 100 };
-
-  var obj = {
-    firstName: 'Albert',
-    lastName: 'Einstein',
-    cars: []
-  };
-
-  for (var i = 0; i < 100; i++) {
-    var copy = JSONPatcherProxy.deepClone(singleCar);
-    var temp = copy;
-    for (var j = 0; j < 5; j++) {
-      temp.temp = JSONPatcherProxy.deepClone(singleCar);
-      temp = temp.temp;
-    }
-    obj.cars.push(copy);
-  }
-
-  var observer = jsonpatch.observe(obj);
-
+  const obj = generateBigObjectFixture(100);
+  const observer = jsonpatch.observe(obj);
   obj.cars.shift();
-
   jsonpatch.generate(observer);
 });
 
 suite.add('PROXIFY big object', function() {
-  var singleCar = { name: 'Tesla', speed: 100 };
-
-  var obj = {
-    firstName: 'Albert',
-    lastName: 'Einstein',
-    cars: []
-  };
-  for (var i = 0; i < 50; i++) {
-    var copy = JSONPatcherProxy.deepClone(singleCar);
-    var temp = copy;
-    for (var j = 0; j < 5; j++) {
-      temp.temp = JSONPatcherProxy.deepClone(singleCar);
-      temp = temp.temp;
-    }
-    obj.cars.push(copy);
-  }
-
-  var jsonPatcherProxy = new JSONPatcherProxy(obj);
-
-  var observedObj = jsonPatcherProxy.observe(true);
+  const obj = generateBigObjectFixture(50);
+  const jsonPatcherProxy = new JSONPatcherProxy(obj);
+  const observedObj = jsonPatcherProxy.observe(true);
   observedObj.a = 1;
 });
 
 suite.add('DIRTY-OBSERVE big object', function() {
-  var singleCar = { name: 'Tesla', speed: 100 };
-
-  var obj = {
-    firstName: 'Albert',
-    lastName: 'Einstein',
-    cars: []
-  };
-  for (var i = 0; i < 50; i++) {
-    var copy = JSONPatcherProxy.deepClone(singleCar);
-    var temp = copy;
-    for (var j = 0; j < 5; j++) {
-      temp.temp = JSONPatcherProxy.deepClone(singleCar);
-      temp = temp.temp;
-    }
-    obj.cars.push(copy);
-  }
-  var observer = jsonpatch.observe(obj);
+  const obj = generateBigObjectFixture(50);
+  const observer = jsonpatch.observe(obj);
   obj.a = 1;
   jsonpatch.generate(observer);
 
