@@ -1,9 +1,23 @@
+/*
+  To run with comparisons:
+  $ npm run bench-compare
+
+  To run without comparisons:
+  $ npm run bench
+  */
+
+let includeComparisons = true;
+
 if (typeof window === 'undefined') {
   const jsdom = require("jsdom");
   const { JSDOM } = jsdom;
   const dom = new JSDOM();
   global.window = dom.window;
   global.document = dom.window.document;
+
+  if (!process.argv.includes("--compare")) {
+    includeComparisons = false;
+  }
 }
 
 if (typeof jsonpatch === 'undefined') {
@@ -59,7 +73,7 @@ function reverseString(str) {
 {
   const suiteName = 'Observe and generate, small object';
   
-  {
+  if (includeComparisons) {
     suite.add(`${suiteName} (noop)`, function() {
       const obj = generateBigObjectFixture(1);
       modifyObj(obj);
@@ -76,7 +90,7 @@ function reverseString(str) {
     });
   }
   
-  {
+  if (includeComparisons) {
     suite.add(`${suiteName} (fast-json-patch)`, function() {
       const obj = generateBigObjectFixture(1);
       const observer = jsonpatch.observe(obj);
@@ -91,7 +105,7 @@ function reverseString(str) {
 {
   const suiteName = 'Observe and generate';
   
-  {
+  if (includeComparisons) {
     suite.add(`${suiteName} (noop)`, function() {
       const obj = generateBigObjectFixture(100);
       modifyObj(obj);
@@ -108,7 +122,7 @@ function reverseString(str) {
     });
   }
   
-  {
+  if (includeComparisons) {
     suite.add(`${suiteName} (fast-json-patch)`, function() {
       const obj = generateBigObjectFixture(100);
       const observer = jsonpatch.observe(obj);
@@ -123,7 +137,7 @@ function reverseString(str) {
 {
   const suiteName = 'Primitive mutation';
 
-  {
+  if (includeComparisons) {
     const obj = generateBigObjectFixture(100);
     
     suite.add(`${suiteName} (noop)`, function() {
@@ -141,7 +155,7 @@ function reverseString(str) {
     });
   }
 
-  {
+  if (includeComparisons) {
     const obj = generateBigObjectFixture(100);
     const observer = jsonpatch.observe(obj);
     
@@ -157,7 +171,7 @@ function reverseString(str) {
 {
   const suiteName = 'Complex mutation';
 
-  {
+  if (includeComparisons) {
     const obj = generateBigObjectFixture(100);
   
     suite.add(`${suiteName} (noop)`, function() {
@@ -177,7 +191,7 @@ function reverseString(str) {
     });
   }
 
-  {
+  if (includeComparisons) {
     const obj = generateBigObjectFixture(100);
     const observer = jsonpatch.observe(obj);
   
@@ -194,7 +208,7 @@ function reverseString(str) {
 {
   const suiteName = 'Serialization';
 
-  {
+  if (includeComparisons) {
     const obj = generateBigObjectFixture(100);
   
     suite.add(`${suiteName} (noop)`, function() {
@@ -212,7 +226,7 @@ function reverseString(str) {
     });
   }
 
-  {
+  if (includeComparisons) {
     const obj = generateBigObjectFixture(100);
     const observer = jsonpatch.observe(obj);
   
