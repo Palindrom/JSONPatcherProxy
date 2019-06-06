@@ -22,21 +22,6 @@ if (typeof Benchmark === 'undefined') {
 
 const suite = new Benchmark.Suite();
 
-function generateDeepObjectFixture() {
-  return {
-    firstName: 'Albert',
-    lastName: 'Einstein',
-    phoneNumbers: [
-      {
-        number: '12345'
-      },
-      {
-        number: '45353'
-      }
-    ]
-  }
-}
-
 function generateSmallObjectFixture() {
   return { name: 'Tesla', speed: 100 };
 }
@@ -58,69 +43,153 @@ function generateBigObjectFixture(carsSize) {
   return obj;
 }
 
-suite.add('jsonpatcherproxy generate operation', function() {
-  const obj = generateDeepObjectFixture();
-  const jsonPatcherProxy = new JSONPatcherProxy(obj);
-  const observedObj = jsonPatcherProxy.observe(true);
-  const patches = jsonPatcherProxy.generate();
-  observedObj.firstName = 'Joachim';
-  observedObj.lastName = 'Wester';
-  observedObj.phoneNumbers[0].number = '123';
-  observedObj.phoneNumbers[1].number = '456';
-});
-
-suite.add('jsonpatch generate operation', function() {
-  const obj = generateDeepObjectFixture();
-  const observer = jsonpatch.observe(obj);
+function modifyObj(obj) {
   obj.firstName = 'Joachim';
   obj.lastName = 'Wester';
-  obj.phoneNumbers[0].number = '123';
-  obj.phoneNumbers[1].number = '456';
-  jsonpatch.generate(observer);
-});
+  obj.cars[0].speed = 123;
+  obj.cars[0].temp.speed = 456;
+}
 
-suite.add('jsonpatcherproxy mutation - huge object', function() {
-  const obj = generateBigObjectFixture(100);
-  const jsonPatcherProxy = new JSONPatcherProxy(obj);
-  const observedObj = jsonPatcherProxy.observe(true);
-  observedObj.cars[50].name = 'Toyota'
-});
+function reverseString(str) {
+  return str.split("").reverse().join("");
+}
 
-suite.add('jsonpatch mutation - huge object', function() {
-  const obj = generateBigObjectFixture(100);
-  const observer = jsonpatch.observe(obj);
-  obj.cars[50].name = 'Toyota';
-  jsonpatch.generate(observer);
-});
+/* ============================= */
 
-suite.add('jsonpatcherproxy generate operation - huge object', function() {
-  const obj = generateBigObjectFixture(100);
-  const jsonPatcherProxy = new JSONPatcherProxy(obj);
-  const observedObj = jsonPatcherProxy.observe(true);
-  observedObj.cars.shift();
-});
+{
+  const suiteName = 'Observe and generate, small object';
+  
+  {
+    suite.add(`${suiteName} (noop)`, function() {
+      const obj = generateBigObjectFixture(1);
+      modifyObj(obj);
+    });
+  }
 
-suite.add('jsonpatch generate operation - huge object', function() {
-  const obj = generateBigObjectFixture(100);
-  const observer = jsonpatch.observe(obj);
-  obj.cars.shift();
-  jsonpatch.generate(observer);
-});
+  {
+    suite.add(`${suiteName} (JSONPatcherProxy)`, function() {
+      const obj = generateBigObjectFixture(1);
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const observedObj = jsonPatcherProxy.observe(true);
+      const patches = jsonPatcherProxy.generate();
+      modifyObj(observedObj);
+    });
+  }
+  
+  {
+    suite.add(`${suiteName} (fast-json-patch)`, function() {
+      const obj = generateBigObjectFixture(1);
+      const observer = jsonpatch.observe(obj);
+      modifyObj(obj);
+      jsonpatch.generate(observer);
+    });
+  }
+}
 
-suite.add('PROXIFY big object', function() {
-  const obj = generateBigObjectFixture(50);
-  const jsonPatcherProxy = new JSONPatcherProxy(obj);
-  const observedObj = jsonPatcherProxy.observe(true);
-  observedObj.a = 1;
-});
+/* ============================= */
 
-suite.add('DIRTY-OBSERVE big object', function() {
-  const obj = generateBigObjectFixture(50);
-  const observer = jsonpatch.observe(obj);
-  obj.a = 1;
-  jsonpatch.generate(observer);
+{
+  const suiteName = 'Observe and generate';
+  
+  {
+    suite.add(`${suiteName} (noop)`, function() {
+      const obj = generateBigObjectFixture(100);
+      modifyObj(obj);
+    });
+  }
 
-});
+  {
+    suite.add(`${suiteName} (JSONPatcherProxy)`, function() {
+      const obj = generateBigObjectFixture(100);
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const observedObj = jsonPatcherProxy.observe(true);
+      const patches = jsonPatcherProxy.generate();
+      modifyObj(observedObj);
+    });
+  }
+  
+  {
+    suite.add(`${suiteName} (fast-json-patch)`, function() {
+      const obj = generateBigObjectFixture(100);
+      const observer = jsonpatch.observe(obj);
+      modifyObj(obj);
+      jsonpatch.generate(observer);
+    });
+  }
+}
+
+/* ============================= */
+
+{
+  const suiteName = 'Primitive mutation';
+
+  {
+    const obj = generateBigObjectFixture(100);
+    
+    suite.add(`${suiteName} (noop)`, function() {
+      obj.cars[50].name = reverseString(obj.cars[50].name);
+    });
+  }
+
+  {
+    const obj = generateBigObjectFixture(100);
+    const jsonPatcherProxy = new JSONPatcherProxy(obj);
+    const observedObj = jsonPatcherProxy.observe(true);
+    
+    suite.add(`${suiteName} (JSONPatcherProxy)`, function() {
+      observedObj.cars[50].name = reverseString(observedObj.cars[50].name);
+    });
+  }
+
+  {
+    const obj = generateBigObjectFixture(100);
+    const observer = jsonpatch.observe(obj);
+    
+    suite.add(`${suiteName} (fast-json-patch)`, function() {
+      obj.cars[50].name = reverseString(obj.cars[50].name);
+      jsonpatch.generate(observer);
+    });
+  }
+}
+
+/* ============================= */
+
+{
+  const suiteName = 'Complex mutation';
+
+  {
+    const obj = generateBigObjectFixture(100);
+  
+    suite.add(`${suiteName} (noop)`, function() {
+      const item = obj.cars.shift();
+      obj.cars.push(item);
+    });
+  }
+
+  {
+    const obj = generateBigObjectFixture(100);
+    const jsonPatcherProxy = new JSONPatcherProxy(obj);
+    const observedObj = jsonPatcherProxy.observe(true);
+  
+    suite.add(`${suiteName} (JSONPatcherProxy)`, function() {
+      const item = observedObj.cars.shift();
+      observedObj.cars.push(item);
+    });
+  }
+
+  {
+    const obj = generateBigObjectFixture(100);
+    const observer = jsonpatch.observe(obj);
+  
+    suite.add(`${suiteName} (fast-json-patch)`, function() {
+      const item = obj.cars.shift();
+      obj.cars.push(item);
+      jsonpatch.generate(observer);
+    });
+  }
+}
+
+/* ============================= */
 
 // if we are in the browser with benchmark < 2.1.2
 if (typeof benchmarkReporter !== 'undefined') {
