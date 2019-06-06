@@ -124,7 +124,7 @@ describe('proxy', function() {
       expect(obj2).toReallyEqual(observedObj);
     });
     it('should generate replace (escaped chars)', function() {
-      var obj = {
+      const obj = {
         '/name/first': 'Albert',
         '/name/last': 'Einstein',
         '~phone~/numbers': [
@@ -136,6 +136,7 @@ describe('proxy', function() {
           }
         ]
       };
+      const obj2 = JSON.parse(JSON.stringify(obj));
       var jsonPatcherProxy = new JSONPatcherProxy(obj);
       var observedObj = jsonPatcherProxy.observe(true);
 
@@ -145,19 +146,6 @@ describe('proxy', function() {
       observedObj['~phone~/numbers'][1].number = '456';
 
       var patches = jsonPatcherProxy.generate();
-      var obj2 = {
-        '/name/first': 'Albert',
-        '/name/last': 'Einstein',
-        '~phone~/numbers': [
-          {
-            number: '12345'
-          },
-          {
-            number: '45353'
-          }
-        ]
-      };
-
       jsonpatch.applyPatch(obj2, patches);
 
       /* iOS and Android */
@@ -278,18 +266,10 @@ describe('proxy', function() {
       /* iOS and Android */
       observedObj = JSONPatcherProxy.deepClone(observedObj);
 
-      expect(observedObj).toReallyEqual({
-        firstName: 'Albert',
-        lastName: 'Einstein',
-        phoneNumbers: [
-          {
-            number: '123'
-          },
-          {
-            number: '456'
-          }
-        ]
-      }); //objects should be still the same
+      const obj2 = generateDeepObjectFixture();
+      obj2.phoneNumbers[0].number = '123';
+      obj2.phoneNumbers[1].number = '456';
+      expect(observedObj).toReallyEqual(obj2); //objects should be still the same
     });
 
     it('should generate replace (changes in new array cell, primitive values)', function() {
@@ -416,18 +396,7 @@ describe('proxy', function() {
 
       var patches = jsonPatcherProxy.generate();
 
-      var obj2 = {
-        lastName: 'Einstein',
-        firstName: 'Albert',
-        phoneNumbers: [
-          {
-            number: '12345'
-          },
-          {
-            number: '4234'
-          }
-        ]
-      };
+      const obj2 = generateDeepObjectFixture();
       jsonpatch.applyPatch(obj2, patches);
       expect(obj2).toEqualInJson(observedObj);
     });
@@ -981,18 +950,10 @@ describe('proxy', function() {
         }
       ]); //first patch should NOT be reported again here
 
-      expect(observedObj).toReallyEqual({
-        firstName: 'Albert',
-        lastName: 'Einstein',
-        phoneNumbers: [
-          {
-            number: '123'
-          },
-          {
-            number: '456'
-          }
-        ]
-      });
+      const obj2 = generateDeepObjectFixture();
+      obj2.phoneNumbers[0].number = '123';
+      obj2.phoneNumbers[1].number = '456';
+      expect(observedObj).toReallyEqual(obj2);
     });
 
     describe(
