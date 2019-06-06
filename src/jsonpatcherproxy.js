@@ -86,7 +86,11 @@ const JSONPatcherProxy = (function() {
       const subtreeMetadata = newValue[instance._metadataSymbol];
       if (subtreeMetadata) {
         if(subtreeMetadata.parent === tree && subtreeMetadata.keyInParent === key) {
-          //this is the same object that we already proxified, proxified now by someone else. In this case, remain silent
+          /* 
+          This is an object that is already proxified by this instance of JSONPatcherProxy, 
+          which is now being proxified by some external code or simply reassigned at the same place.
+          In this case, remain silent.
+          */
           return Reflect.set(tree, key, newValue);
         }
         subtreeMetadata.parent = tree;
