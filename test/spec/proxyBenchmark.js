@@ -191,6 +191,39 @@ function reverseString(str) {
 
 /* ============================= */
 
+{
+  const suiteName = 'Serialization';
+
+  {
+    const obj = generateBigObjectFixture(100);
+  
+    suite.add(`${suiteName} (noop)`, function() {
+      JSON.stringify(obj);
+    });
+  }
+
+  {
+    const obj = generateBigObjectFixture(100);
+    const jsonPatcherProxy = new JSONPatcherProxy(obj);
+    const observedObj = jsonPatcherProxy.observe(true);
+  
+    suite.add(`${suiteName} (JSONPatcherProxy)`, function() {
+      JSON.stringify(observedObj);
+    });
+  }
+
+  {
+    const obj = generateBigObjectFixture(100);
+    const observer = jsonpatch.observe(obj);
+  
+    suite.add(`${suiteName} (fast-json-patch)`, function() {
+      JSON.stringify(obj);
+    });
+  }
+}
+
+/* ============================= */
+
 // if we are in the browser with benchmark < 2.1.2
 if (typeof benchmarkReporter !== 'undefined') {
   benchmarkReporter(suite);
