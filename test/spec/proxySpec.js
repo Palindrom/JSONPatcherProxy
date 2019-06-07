@@ -295,6 +295,27 @@ describe('proxy', function() {
         }
       ]);
     });
+    
+    it('should generate replace (deep object, proxified twice by JSONPatcherProxy)', function() {
+      const obj = generateDeepObjectFixture();
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      let observedObj = jsonPatcherProxy.observe(true);
+      const jsonPatcherProxy2 = new JSONPatcherProxy(observedObj);
+      let observedObj2 = jsonPatcherProxy2.observe(true);
+    
+      observedObj2.phoneNumbers[0].number = '123';
+
+      const patches = jsonPatcherProxy.generate();
+      const patches2 = jsonPatcherProxy2.generate();
+      expect(patches).toReallyEqual([
+        {
+          op: 'replace',
+          path: '/phoneNumbers/0/number',
+          value: '123'
+        }
+      ]);
+      expect(patches).toReallyEqual(patches2);
+    });
 
     it('should generate replace (changes in new array cell, primitive values)', function() {
       var arr = [1];
