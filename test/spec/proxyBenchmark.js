@@ -85,8 +85,8 @@ function reverseString(str) {
       const obj = generateBigObjectFixture(1);
       const jsonPatcherProxy = new JSONPatcherProxy(obj);
       const observedObj = jsonPatcherProxy.observe(true);
-      const patches = jsonPatcherProxy.generate();
       modifyObj(observedObj);
+      jsonPatcherProxy.generate();
     });
   }
   
@@ -117,8 +117,8 @@ function reverseString(str) {
       const obj = generateBigObjectFixture(100);
       const jsonPatcherProxy = new JSONPatcherProxy(obj);
       const observedObj = jsonPatcherProxy.observe(true);
-      const patches = jsonPatcherProxy.generate();
       modifyObj(observedObj);
+      jsonPatcherProxy.generate();
     });
   }
   
@@ -152,6 +152,7 @@ function reverseString(str) {
     
     suite.add(`${suiteName} (JSONPatcherProxy)`, function() {
       observedObj.cars[50].name = reverseString(observedObj.cars[50].name);
+      jsonPatcherProxy.generate();
     });
   }
 
@@ -188,6 +189,7 @@ function reverseString(str) {
     suite.add(`${suiteName} (JSONPatcherProxy)`, function() {
       const item = observedObj.cars.shift();
       observedObj.cars.push(item);
+      jsonPatcherProxy.generate();
     });
   }
 
