@@ -154,6 +154,43 @@ describe('proxy', function() {
       expect(obj2).toReallyEqual(observedObj);
     });
 
+    it('should generate replace (changed by setter)', function() {
+      var obj = {
+        'foo': 'old'
+      };
+      Object.defineProperty(obj, 'bar',{
+        set: function(newValue){
+          this.foo = newValue;
+        },
+        get: function(){
+          return this.foo
+        },
+        enumerable: true
+      });
+      var jsonPatcherProxy = new JSONPatcherProxy(obj);
+      var observedObj = jsonPatcherProxy.observe(true);
+
+      observedObj.bar = 'new';
+
+      var patches = jsonPatcherProxy.generate();
+
+      expect(patches).toContain({op:'replace', path: '/bar', value: 'new'});
+      expect(patches).toContain({op:'replace', path: '/foo', value: 'new'});
+      expect(patches.length).toEqual(2);
+
+      var obj2 = {
+        'foo': 'old',
+        'bar': 'old'
+      };
+
+      jsonpatch.applyPatch(obj2, patches);
+
+      /* iOS and Android */
+      observedObj = JSONPatcherProxy.deepClone(observedObj);
+
+      expect(obj2).toReallyEqual(observedObj);
+    });
+
     it('should generate replace (2 observers)', function() {
       var person1 = {
         firstName: 'Alexandra',
