@@ -56,11 +56,12 @@ const JSONPatcherProxy = (function() {
    * A callback to be used as the proxy set trap callback.
    * It updates parenthood map if needed, proxifies nested newly-added objects, calls default callback with the changes occurred.
    * @param {JSONPatcherProxy} instance JSONPatcherProxy instance
+   * @param {Proxy} proxifiedTree the proxy of the affected object
    * @param {Object} tree the affected object
    * @param {String} key the effect property's name
    * @param {Any} newValue the value being set
    */
-  function trapForSet(instance, tree, key, newValue) {
+  function trapForSet(instance, proxifiedTree, tree, key, newValue) {
     const pathToKey = getPathToTree(instance, tree) + '/' + escapePathComponent(key);
     const subtreeMetadata = instance._treeMetadataMap.get(newValue);
 
@@ -111,7 +112,7 @@ const JSONPatcherProxy = (function() {
       // applying De Morgan's laws would be a tad faster, but less readable
       if (!isTreeAnArray && !tree.hasOwnProperty(key)) {
         // `undefined` is being set to an already undefined value, keep silent
-        return Reflect.set(tree, key, newValue);
+        return Reflect.set(tree, key, newValue, proxifiedTree);
       } else {
         // when array element is set to `undefined`, should generate replace to `null`
         if (isTreeAnArray) {
@@ -132,7 +133,7 @@ const JSONPatcherProxy = (function() {
         if(key != 'length') {
           console.warn('JSONPatcherProxy noticed a non-integer prop was set for an array. This will not emit a patch');
         }
-        return Reflect.set(tree, key, newValue);
+        return Reflect.set(tree, key, newValue, proxifiedTree);
       }
       operation.op = 'add';
       if (tree.hasOwnProperty(key)) {
@@ -142,7 +143,7 @@ const JSONPatcherProxy = (function() {
       }
       operation.value = newValue;
     }
-    const reflectionResult = Reflect.set(tree, key, newValue);
+    const reflectionResult = Reflect.set(tree, key, newValue, proxifiedTree);
     instance._defaultCallback(operation);
     return reflectionResult;
   }
@@ -216,7 +217,7 @@ const JSONPatcherProxy = (function() {
       return tree;
     }
     const handler = {
-      set: (...args) => trapForSet(this, ...args),
+      set: (...args) => trapForSet(this, treeMetadata.proxy, ...args),
       deleteProperty: (...args) => trapForDeleteProperty(this, ...args)
     };
     const treeMetadata = Proxy.revocable(tree, handler);
