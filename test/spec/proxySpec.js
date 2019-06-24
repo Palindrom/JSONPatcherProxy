@@ -24,6 +24,21 @@ function getPatchesUsingCompare(objFactory, objChanger) {
   return jsonpatch.compare(mirror, JSON.parse(JSON.stringify(obj)));
 }
 
+function generateDeepObjectFixture() {
+  return {
+    firstName: 'Albert',
+    lastName: 'Einstein',
+    phoneNumbers: [
+      {
+        number: '12345'
+      },
+      {
+        number: '45353'
+      }
+    ]
+  }
+}
+
 var customMatchers = {
   /**
      * This matcher is only needed in Chrome 28 (Chrome 28 cannot successfully compare observed objects immediately after they have been changed. Chrome 30 is unaffected)
@@ -88,18 +103,7 @@ describe('proxy', function() {
 
   describe('generate', function() {
     it('should generate replace', function() {
-      var obj = {
-        firstName: 'Albert',
-        lastName: 'Einstein',
-        phoneNumbers: [
-          {
-            number: '12345'
-          },
-          {
-            number: '45353'
-          }
-        ]
-      };
+      const obj = generateDeepObjectFixture();
       var jsonPatcherProxy = new JSONPatcherProxy(obj);
       var observedObj = jsonPatcherProxy.observe(true);
 
@@ -111,18 +115,7 @@ describe('proxy', function() {
 
       var patches = jsonPatcherProxy.generate();
 
-      var obj2 = {
-        firstName: 'Albert',
-        lastName: 'Einstein',
-        phoneNumbers: [
-          {
-            number: '12345'
-          },
-          {
-            number: '45353'
-          }
-        ]
-      };
+      const obj2 = generateDeepObjectFixture();
       jsonpatch.applyPatch(obj2, patches);
 
       /* iOS and Android */
@@ -131,7 +124,7 @@ describe('proxy', function() {
       expect(obj2).toReallyEqual(observedObj);
     });
     it('should generate replace (escaped chars)', function() {
-      var obj = {
+      const obj = {
         '/name/first': 'Albert',
         '/name/last': 'Einstein',
         '~phone~/numbers': [
@@ -143,6 +136,7 @@ describe('proxy', function() {
           }
         ]
       };
+      const obj2 = JSON.parse(JSON.stringify(obj));
       var jsonPatcherProxy = new JSONPatcherProxy(obj);
       var observedObj = jsonPatcherProxy.observe(true);
 
@@ -152,19 +146,6 @@ describe('proxy', function() {
       observedObj['~phone~/numbers'][1].number = '456';
 
       var patches = jsonPatcherProxy.generate();
-      var obj2 = {
-        '/name/first': 'Albert',
-        '/name/last': 'Einstein',
-        '~phone~/numbers': [
-          {
-            number: '12345'
-          },
-          {
-            number: '45353'
-          }
-        ]
-      };
-
       jsonpatch.applyPatch(obj2, patches);
 
       /* iOS and Android */
@@ -212,19 +193,7 @@ describe('proxy', function() {
     });
 
     it('should generate replace (double change, shallow object)', function() {
-      var obj = {
-        firstName: 'Albert',
-        lastName: 'Einstein',
-        phoneNumbers: [
-          {
-            number: '12345'
-          },
-          {
-            number: '45353'
-          }
-        ]
-      };
-
+      const obj = generateDeepObjectFixture();
       var jsonPatcherProxy = new JSONPatcherProxy(obj);
       var observedObj = jsonPatcherProxy.observe(true);
 
@@ -268,19 +237,7 @@ describe('proxy', function() {
     });
 
     it('should generate replace (double change, deep object)', function() {
-      var obj = {
-        firstName: 'Albert',
-        lastName: 'Einstein',
-        phoneNumbers: [
-          {
-            number: '12345'
-          },
-          {
-            number: '45353'
-          }
-        ]
-      };
-
+      const obj = generateDeepObjectFixture();
       var jsonPatcherProxy = new JSONPatcherProxy(obj);
       var observedObj = jsonPatcherProxy.observe(true);
 
@@ -309,18 +266,10 @@ describe('proxy', function() {
       /* iOS and Android */
       observedObj = JSONPatcherProxy.deepClone(observedObj);
 
-      expect(observedObj).toReallyEqual({
-        firstName: 'Albert',
-        lastName: 'Einstein',
-        phoneNumbers: [
-          {
-            number: '123'
-          },
-          {
-            number: '456'
-          }
-        ]
-      }); //objects should be still the same
+      const obj2 = generateDeepObjectFixture();
+      obj2.phoneNumbers[0].number = '123';
+      obj2.phoneNumbers[1].number = '456';
+      expect(observedObj).toReallyEqual(obj2); //objects should be still the same
     });
 
     it('should generate replace (changes in new array cell, primitive values)', function() {
@@ -419,14 +368,7 @@ describe('proxy', function() {
       ]);
     });
     it('should generate add', function() {
-      var obj = {
-        lastName: 'Einstein',
-        phoneNumbers: [
-          {
-            number: '12345'
-          }
-        ]
-      };
+      const obj = generateDeepObjectFixture();
       var jsonPatcherProxy = new JSONPatcherProxy(obj);
       var observedObj = jsonPatcherProxy.observe(true);
 
@@ -438,31 +380,12 @@ describe('proxy', function() {
       });
       var patches = jsonPatcherProxy.generate();
 
-      var obj2 = {
-        lastName: 'Einstein',
-        phoneNumbers: [
-          {
-            number: '12345'
-          }
-        ]
-      };
-
+      var obj2 = generateDeepObjectFixture();
       jsonpatch.applyPatch(obj2, patches);
       expect(obj2).toEqualInJson(observedObj);
     });
     it('should generate remove', function() {
-      var obj = {
-        lastName: 'Einstein',
-        firstName: 'Albert',
-        phoneNumbers: [
-          {
-            number: '12345'
-          },
-          {
-            number: '4234'
-          }
-        ]
-      };
+      const obj = generateDeepObjectFixture();
       var jsonPatcherProxy = new JSONPatcherProxy(obj);
       var observedObj = jsonPatcherProxy.observe(true);
 
@@ -473,34 +396,12 @@ describe('proxy', function() {
 
       var patches = jsonPatcherProxy.generate();
 
-      var obj2 = {
-        lastName: 'Einstein',
-        firstName: 'Albert',
-        phoneNumbers: [
-          {
-            number: '12345'
-          },
-          {
-            number: '4234'
-          }
-        ]
-      };
+      const obj2 = generateDeepObjectFixture();
       jsonpatch.applyPatch(obj2, patches);
       expect(obj2).toEqualInJson(observedObj);
     });
     it('should generate remove and disable all traps', function() {
-      var obj = {
-        lastName: 'Einstein',
-        firstName: 'Albert',
-        phoneNumbers: [
-          {
-            number: '12345'
-          },
-          {
-            number: '4234'
-          }
-        ]
-      };
+      const obj = generateDeepObjectFixture();
       var jsonPatcherProxy = new JSONPatcherProxy(obj);
       var observedObj = jsonPatcherProxy.observe(true);
 
@@ -937,18 +838,7 @@ describe('proxy', function() {
   describe('callback', function() {
     it('should generate replace', function() {
       var obj2;
-      var obj = {
-        firstName: 'Albert',
-        lastName: 'Einstein',
-        phoneNumbers: [
-          {
-            number: '12345'
-          },
-          {
-            number: '45353'
-          }
-        ]
-      };
+      const obj = generateDeepObjectFixture();
       var jsonPatcherProxy = new JSONPatcherProxy(obj);
       var observedObj = jsonPatcherProxy.observe(true);
 
@@ -959,18 +849,7 @@ describe('proxy', function() {
       observedObj.firstName = 'Joachim';
 
       function objChanged(operation) {
-        obj2 = {
-          firstName: 'Albert',
-          lastName: 'Einstein',
-          phoneNumbers: [
-            {
-              number: '12345'
-            },
-            {
-              number: '45353'
-            }
-          ]
-        };
+        obj2 = generateDeepObjectFixture();
         jsonpatch.applyOperation(obj2, operation);
 
         /* iOS and Android */
@@ -984,18 +863,7 @@ describe('proxy', function() {
       var lastPatches,
         called = 0;
 
-      var obj = {
-        firstName: 'Albert',
-        lastName: 'Einstein',
-        phoneNumbers: [
-          {
-            number: '12345'
-          },
-          {
-            number: '45353'
-          }
-        ]
-      };
+      const obj = generateDeepObjectFixture();
       var jsonPatcherProxy = new JSONPatcherProxy(obj);
 
       var observedObj = jsonPatcherProxy.observe(true, function(patches) {
@@ -1051,18 +919,7 @@ describe('proxy', function() {
       var lastPatches,
         called = 0;
 
-      var obj = {
-        firstName: 'Albert',
-        lastName: 'Einstein',
-        phoneNumbers: [
-          {
-            number: '12345'
-          },
-          {
-            number: '45353'
-          }
-        ]
-      };
+      const obj = generateDeepObjectFixture();
       var jsonPatcherProxy = new JSONPatcherProxy(obj);
 
       var observedObj = jsonPatcherProxy.observe(true);
@@ -1093,18 +950,10 @@ describe('proxy', function() {
         }
       ]); //first patch should NOT be reported again here
 
-      expect(observedObj).toReallyEqual({
-        firstName: 'Albert',
-        lastName: 'Einstein',
-        phoneNumbers: [
-          {
-            number: '123'
-          },
-          {
-            number: '456'
-          }
-        ]
-      });
+      const obj2 = generateDeepObjectFixture();
+      obj2.phoneNumbers[0].number = '123';
+      obj2.phoneNumbers[1].number = '456';
+      expect(observedObj).toReallyEqual(obj2);
     });
 
     describe(
@@ -1200,18 +1049,7 @@ describe('proxy', function() {
       var lastPatches,
         called = 0,
         res;
-      var obj = {
-        firstName: 'Albert',
-        lastName: 'Einstein',
-        phoneNumbers: [
-          {
-            number: '12345'
-          },
-          {
-            number: '45353'
-          }
-        ]
-      };
+        const obj = generateDeepObjectFixture();
       var jsonPatcherProxy = new JSONPatcherProxy(obj);
       var observedObj = jsonPatcherProxy.observe(true, function(patches) {
         called++;
@@ -1427,20 +1265,7 @@ describe('proxy', function() {
   describe('pausing and resuming', function() {
     it("shouldn't emit patches when paused", function() {
       var called = 0;
-
-      var obj = {
-        firstName: 'Albert',
-        lastName: 'Einstein',
-        phoneNumbers: [
-          {
-            number: '12345'
-          },
-          {
-            number: '45353'
-          }
-        ]
-      };
-
+      const obj = generateDeepObjectFixture();
       var jsonPatcherProxy = new JSONPatcherProxy(obj);
       var observedObj = jsonPatcherProxy.observe(true, function(patches) {
         called++;
@@ -1460,20 +1285,7 @@ describe('proxy', function() {
 
     it('Should re-start emitting patches when paused then resumed', function() {
       var called = 0;
-
-      var obj = {
-        firstName: 'Albert',
-        lastName: 'Einstein',
-        phoneNumbers: [
-          {
-            number: '12345'
-          },
-          {
-            number: '45353'
-          }
-        ]
-      };
-
+      const obj = generateDeepObjectFixture();
       var jsonPatcherProxy = new JSONPatcherProxy(obj);
       var observedObj = jsonPatcherProxy.observe(true, function(patches) {
         called++;
