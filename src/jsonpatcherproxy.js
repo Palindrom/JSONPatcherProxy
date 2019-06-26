@@ -112,7 +112,7 @@ const JSONPatcherProxy = (function() {
       // applying De Morgan's laws would be a tad faster, but less readable
       if (!isTreeAnArray && !tree.hasOwnProperty(key)) {
         // `undefined` is being set to an already undefined value, keep silent
-        return Reflect.set(tree, key, newValue, proxifiedTree);
+        return instance._updateValue(tree, key, newValue, proxifiedTree);
       } else {
         // when array element is set to `undefined`, should generate replace to `null`
         if (isTreeAnArray) {
@@ -133,7 +133,7 @@ const JSONPatcherProxy = (function() {
         if(key != 'length') {
           console.warn('JSONPatcherProxy noticed a non-integer prop was set for an array. This will not emit a patch');
         }
-        return Reflect.set(tree, key, newValue, proxifiedTree);
+        return instance._updateValue(tree, key, newValue, proxifiedTree);
       }
       operation.op = 'add';
       if (tree.hasOwnProperty(key)) {
@@ -143,7 +143,7 @@ const JSONPatcherProxy = (function() {
       }
       operation.value = newValue;
     }
-    const reflectionResult = Reflect.set(tree, key, newValue, proxifiedTree);
+    const reflectionResult = instance._updateValue(tree, key, newValue, proxifiedTree);
     instance._defaultCallback(operation);
     return reflectionResult;
   }
@@ -190,18 +190,15 @@ const JSONPatcherProxy = (function() {
     * Creates an instance of JSONPatcherProxy around your object of interest `root`. 
     * @param {Object|Array} root - the object you want to wrap
     * @param {Boolean} [showDetachedWarning = true] - whether to log a warning when a detached sub-object is modified @see {@link https://github.com/Palindrom/JSONPatcherProxy#detached-objects} 
+    * @param {String} [useReflection = "auto"] - whether to autodetect if using Reflect API is needed, or always use it, or never use it
     * @returns {JSONPatcherProxy}
     * @constructor
     */
-  function JSONPatcherProxy(root, showDetachedWarning) {
+  function JSONPatcherProxy(root, showDetachedWarning = true, useReflection = "auto") {
     this._isProxifyingTreeNow = false;
     this._isObserving = false;
     this._treeMetadataMap = new Map();
     this._parenthoodMap = new Map();
-    // default to true
-    if (typeof showDetachedWarning !== 'boolean') {
-      showDetachedWarning = true;
-    }
 
     this._showDetachedWarning = showDetachedWarning;
     this._originalRoot = root;
@@ -210,6 +207,34 @@ const JSONPatcherProxy = (function() {
     this._userCallback;
     this._defaultCallback;
     this._patches;
+
+    if (useReflection === "auto") {
+      this._updateValue = this._updateValueByAuto;
+    }
+    else if (useReflection) {
+      this._updateValue = this._updateValueByReflection;
+    }
+    else {
+      this._updateValue = this._updateValueByAssignment;
+    }
+  }
+
+  JSONPatcherProxy.prototype._updateValueByAuto = function(obj, prop, newValue, context) {
+    const descriptor = Object.getOwnPropertyDescriptor(obj, prop);
+    if (descriptor && descriptor.set) { //descriptor is undefined on array items
+      return Reflect.set(obj, prop, newValue, context);
+    }
+    obj[prop] = newValue;
+    return true;
+  }
+
+  JSONPatcherProxy.prototype._updateValueByAssignment = function(obj, prop, newValue) {
+    obj[prop] = newValue;
+    return true;
+  }
+
+  JSONPatcherProxy.prototype._updateValueByReflection = function(obj, prop, newValue, context) {
+    return Reflect.set(obj, prop, newValue, context);
   }
 
   JSONPatcherProxy.prototype._generateProxyAtKey = function(parent, tree, key) {
@@ -283,7 +308,7 @@ const JSONPatcherProxy = (function() {
         newValue
       ) => {
         console.warn(message);
-        return Reflect.set(parent, key, newValue);
+        return this._updateValueByAssignment(parent, key, newValue);
       };
       treeMetadata.handler.deleteProperty = (
         parent,

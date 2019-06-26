@@ -81,9 +81,29 @@ function reverseString(str) {
   }
 
   {
-    suite.add(`${suiteName} (JSONPatcherProxy)`, function() {
+    suite.add(`${suiteName} (JSONPatcherProxy - assignment)`, function() {
       const obj = generateBigObjectFixture(1);
-      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const jsonPatcherProxy = new JSONPatcherProxy(obj, false, false);
+      const observedObj = jsonPatcherProxy.observe(true);
+      modifyObj(observedObj);
+      jsonPatcherProxy.generate();
+    });
+  }
+
+  {
+    suite.add(`${suiteName} (JSONPatcherProxy - reflection)`, function() {
+      const obj = generateBigObjectFixture(1);
+      const jsonPatcherProxy = new JSONPatcherProxy(obj, false, true);
+      const observedObj = jsonPatcherProxy.observe(true);
+      modifyObj(observedObj);
+      jsonPatcherProxy.generate();
+    });
+  }
+
+  {
+    suite.add(`${suiteName} (JSONPatcherProxy - auto)`, function() {
+      const obj = generateBigObjectFixture(1);
+      const jsonPatcherProxy = new JSONPatcherProxy(obj, false, "auto");
       const observedObj = jsonPatcherProxy.observe(true);
       modifyObj(observedObj);
       jsonPatcherProxy.generate();
@@ -113,9 +133,29 @@ function reverseString(str) {
   }
 
   {
-    suite.add(`${suiteName} (JSONPatcherProxy)`, function() {
+    suite.add(`${suiteName} (JSONPatcherProxy - assignment)`, function() {
       const obj = generateBigObjectFixture(100);
-      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const jsonPatcherProxy = new JSONPatcherProxy(obj, false, false);
+      const observedObj = jsonPatcherProxy.observe(true);
+      modifyObj(observedObj);
+      jsonPatcherProxy.generate();
+    });
+  }
+
+  {
+    suite.add(`${suiteName} (JSONPatcherProxy - reflection)`, function() {
+      const obj = generateBigObjectFixture(100);
+      const jsonPatcherProxy = new JSONPatcherProxy(obj, false, true);
+      const observedObj = jsonPatcherProxy.observe(true);
+      modifyObj(observedObj);
+      jsonPatcherProxy.generate();
+    });
+  }
+
+  {
+    suite.add(`${suiteName} (JSONPatcherProxy - auto)`, function() {
+      const obj = generateBigObjectFixture(100);
+      const jsonPatcherProxy = new JSONPatcherProxy(obj, false, "auto");
       const observedObj = jsonPatcherProxy.observe(true);
       modifyObj(observedObj);
       jsonPatcherProxy.generate();
@@ -147,10 +187,32 @@ function reverseString(str) {
 
   {
     const obj = generateBigObjectFixture(100);
-    const jsonPatcherProxy = new JSONPatcherProxy(obj);
+    const jsonPatcherProxy = new JSONPatcherProxy(obj, false, false);
     const observedObj = jsonPatcherProxy.observe(true);
     
-    suite.add(`${suiteName} (JSONPatcherProxy)`, function() {
+    suite.add(`${suiteName} (JSONPatcherProxy - assignment)`, function() {
+      observedObj.cars[50].name = reverseString(observedObj.cars[50].name);
+      jsonPatcherProxy.generate();
+    });
+  }
+
+  {
+    const obj = generateBigObjectFixture(100);
+    const jsonPatcherProxy = new JSONPatcherProxy(obj, false, true);
+    const observedObj = jsonPatcherProxy.observe(true);
+    
+    suite.add(`${suiteName} (JSONPatcherProxy - reflection)`, function() {
+      observedObj.cars[50].name = reverseString(observedObj.cars[50].name);
+      jsonPatcherProxy.generate();
+    });
+  }
+
+  {
+    const obj = generateBigObjectFixture(100);
+    const jsonPatcherProxy = new JSONPatcherProxy(obj, false, "auto");
+    const observedObj = jsonPatcherProxy.observe(true);
+    
+    suite.add(`${suiteName} (JSONPatcherProxy - auto)`, function() {
       observedObj.cars[50].name = reverseString(observedObj.cars[50].name);
       jsonPatcherProxy.generate();
     });
@@ -183,10 +245,34 @@ function reverseString(str) {
 
   {
     const obj = generateBigObjectFixture(100);
-    const jsonPatcherProxy = new JSONPatcherProxy(obj);
+    const jsonPatcherProxy = new JSONPatcherProxy(obj, false, false);
     const observedObj = jsonPatcherProxy.observe(true);
   
-    suite.add(`${suiteName} (JSONPatcherProxy)`, function() {
+    suite.add(`${suiteName} (JSONPatcherProxy - assignment)`, function() {
+      const item = observedObj.cars.shift();
+      observedObj.cars.push(item);
+      jsonPatcherProxy.generate();
+    });
+  }
+
+  {
+    const obj = generateBigObjectFixture(100);
+    const jsonPatcherProxy = new JSONPatcherProxy(obj, false, true);
+    const observedObj = jsonPatcherProxy.observe(true);
+  
+    suite.add(`${suiteName} (JSONPatcherProxy - reflection)`, function() {
+      const item = observedObj.cars.shift();
+      observedObj.cars.push(item);
+      jsonPatcherProxy.generate();
+    });
+  }
+
+  {
+    const obj = generateBigObjectFixture(100);
+    const jsonPatcherProxy = new JSONPatcherProxy(obj, false, "auto");
+    const observedObj = jsonPatcherProxy.observe(true);
+  
+    suite.add(`${suiteName} (JSONPatcherProxy - auto)`, function() {
       const item = observedObj.cars.shift();
       observedObj.cars.push(item);
       jsonPatcherProxy.generate();
@@ -220,10 +306,30 @@ function reverseString(str) {
 
   {
     const obj = generateBigObjectFixture(100);
-    const jsonPatcherProxy = new JSONPatcherProxy(obj);
+    const jsonPatcherProxy = new JSONPatcherProxy(obj, false, false);
     const observedObj = jsonPatcherProxy.observe(true);
   
-    suite.add(`${suiteName} (JSONPatcherProxy)`, function() {
+    suite.add(`${suiteName} (JSONPatcherProxy - assignment)`, function() {
+      JSON.stringify(observedObj);
+    });
+  }
+
+  {
+    const obj = generateBigObjectFixture(100);
+    const jsonPatcherProxy = new JSONPatcherProxy(obj, false, true);
+    const observedObj = jsonPatcherProxy.observe(true);
+  
+    suite.add(`${suiteName} (JSONPatcherProxy - reflection)`, function() {
+      JSON.stringify(observedObj);
+    });
+  }
+
+  {
+    const obj = generateBigObjectFixture(100);
+    const jsonPatcherProxy = new JSONPatcherProxy(obj, false, "auto");
+    const observedObj = jsonPatcherProxy.observe(true);
+  
+    suite.add(`${suiteName} (JSONPatcherProxy - auto)`, function() {
       JSON.stringify(observedObj);
     });
   }

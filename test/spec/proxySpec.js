@@ -154,7 +154,7 @@ describe('proxy', function() {
       expect(obj2).toReallyEqual(observedObj);
     });
 
-    it('should generate replace (changed by setter)', function() {
+    it('should generate replace (changed by setter, if explicit useReflection not provided)', function() {
       const obj = {
         'foo': 'old'
       };
@@ -177,6 +177,55 @@ describe('proxy', function() {
       expect(patches).toContain({op:'replace', path: '/bar', value: 'new'});
       expect(patches).toContain({op:'replace', path: '/foo', value: 'new'});
       expect(patches.length).toEqual(2);
+    });
+
+    it('should generate replace (changed by setter, if useReflection set to true)', function() {
+      const obj = {
+        'foo': 'old'
+      };
+      Object.defineProperty(obj, 'bar',{
+        set: function(newValue){
+          this.foo = newValue;
+        },
+        get: function(){
+          return this.foo
+        },
+        enumerable: true
+      });
+      const jsonPatcherProxy = new JSONPatcherProxy(obj, false, true);
+      const observedObj = jsonPatcherProxy.observe(true);
+
+      observedObj.bar = 'new';
+
+      const patches = jsonPatcherProxy.generate();
+
+      expect(patches).toContain({op:'replace', path: '/bar', value: 'new'});
+      expect(patches).toContain({op:'replace', path: '/foo', value: 'new'});
+      expect(patches.length).toEqual(2);
+    });
+
+    it('should NOT generate replace (changed by setter, if useReflection set to false)', function() {
+      const obj = {
+        'foo': 'old'
+      };
+      Object.defineProperty(obj, 'bar',{
+        set: function(newValue){
+          this.foo = newValue;
+        },
+        get: function(){
+          return this.foo
+        },
+        enumerable: true
+      });
+      const jsonPatcherProxy = new JSONPatcherProxy(obj, false, false);
+      const observedObj = jsonPatcherProxy.observe(true);
+
+      observedObj.bar = 'new';
+
+      const patches = jsonPatcherProxy.generate();
+
+      expect(patches).toContain({op:'replace', path: '/bar', value: 'new'});
+      expect(patches.length).toEqual(1);
     });
 
     it('should generate replace (2 observers)', function() {

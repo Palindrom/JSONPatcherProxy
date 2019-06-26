@@ -95,14 +95,16 @@ observedObject.firstName = "Albert";
 
 ## Object observing
 
-#### constructor: JSONPatcherProxy( `root` Object, [`showDetachedWarning` Boolean = true] ):  JSONPatcherProxy
+#### constructor: JSONPatcherProxy( `root` Object, [`showDetachedWarning` Boolean = true] , [`useReflection` String = "auto"|Boolean] ):  JSONPatcherProxy
 
 Creates an instance of `JSONPatcherProxy` around your object of interest `root`, for later `observe`, `unobserve`, `pause`, `resume` calls.
 Returns `JSONPatcherProxy`.
 
 `root`: The object tree you want to observe
 
-`showDetachedWarning`: Modifying a child object that is detached from the parent tree is not recommended, because the object will continue to be a Proxy. That's why JSONPatcherProxy warns when a detached proxy is accessed. You can set this to false to disable those warnings.
+`showDetachedWarning`: The default setting is `true`. It makes JSONPatcherProxy show a console warning when a detached proxy is accessed. Such warning allows detecting problems with stale references that would otherwise cause memory leaks or slow performance due to using a proxy that is no longer necessary. You can set this argument to `false` to disable the console warnings.
+
+`useReflection`: The default setting is `"auto"`. With the default setting, JSONPatcherProxy will use Reflect API to set the proxy object as the `this` context for any setter encountered in the observed object. This, in turn, makes it possible for the proxy to detect changes that happen inside of a setter. Set this argument to `true` to always use Reflection API, without checking if the changed property is a setter (gives 10% performance decrease compared to `"auto"`). Set this argument to `false` to never use Reflection API (gives 10% performance increase compared to `"auto"`, but should be used only when there are no setters in the observed object).
 
 
 #### JSONPatcherProxy#observe(`record` Boolean, [`callback` Function]): Proxy
