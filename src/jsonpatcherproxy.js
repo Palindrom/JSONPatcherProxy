@@ -285,14 +285,6 @@ const JSONPatcherProxy = (function() {
         console.warn(message);
         return Reflect.set(parent, key, newValue);
       };
-      treeMetadata.handler.set = (
-        parent,
-        key,
-        newValue
-      ) => {
-        console.warn(message);
-        return Reflect.set(parent, key, newValue);
-      };
       treeMetadata.handler.deleteProperty = (
         parent,
         key
