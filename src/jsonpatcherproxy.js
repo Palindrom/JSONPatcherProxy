@@ -140,7 +140,11 @@ const JSONPatcherProxy = (function() {
           operation.op = 'replace'; // setting `undefined` array elements is a `replace` op
         }
       }
-      operation.value = newValue;
+      if (newValue === null || typeof(newValue) !== 'object') {
+        operation.value = newValue;
+      } else {
+        operation.value = JSON.parse(JSON.stringify(newValue));
+      }
     }
     const reflectionResult = Reflect.set(tree, key, newValue);
     instance._defaultCallback(operation);
