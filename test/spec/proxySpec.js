@@ -378,6 +378,7 @@ describe('proxy', function() {
       observedObj.phoneNumbers.push({
         number: '456'
       });
+      observedObj.nothing = null;
       var patches = jsonPatcherProxy.generate();
 
       var obj2 = generateDeepObjectFixture();
@@ -727,6 +728,33 @@ describe('proxy', function() {
           ]);
           expect(genereatedPatches).toReallyEqual(comparedPatches);
         });
+
+        it('`undefined` property is set to `null`', function() {
+          var objFactory = function() {
+            return {
+              foo: undefined
+            };
+          };
+
+          var objChanger = function(obj) {
+            obj.foo = null;
+          };
+
+          var genereatedPatches = getPatchesUsingGenerate(
+            objFactory,
+            objChanger
+          );
+          var comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
+
+          expect(genereatedPatches).toReallyEqual([
+            {
+              op: 'add',
+              path: '/foo',
+              value: null
+            }
+          ]);
+          expect(genereatedPatches).toReallyEqual(comparedPatches);
+        });
       });
 
       describe('should generate remove, when', function() {
@@ -734,6 +762,32 @@ describe('proxy', function() {
           var objFactory = function() {
             return {
               foo: 'bar'
+            };
+          };
+
+          var objChanger = function(obj) {
+            obj.foo = undefined;
+          };
+
+          var genereatedPatches = getPatchesUsingGenerate(
+            objFactory,
+            objChanger
+          );
+          var comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
+
+          expect(genereatedPatches).toReallyEqual([
+            {
+              op: 'remove',
+              path: '/foo'
+            }
+          ]);
+          expect(genereatedPatches).toReallyEqual(comparedPatches);
+        });
+
+        it('property with `null` value is set to `undefined`', function() {
+          var objFactory = function() {
+            return {
+              foo: null
             };
           };
 
@@ -811,6 +865,64 @@ describe('proxy', function() {
           expect(genereatedPatches).toReallyEqual(comparedPatches);
         });
       });
+    });
+  });
+
+  describe('no-change operations should generate empty patch', function () {
+    it('in arrays', function() {
+      var objFactory = function() {
+        return {
+          foo: [0, undefined, null, undefined, null, 2, 'bar']
+        };
+      };
+
+      var objChanger = function(obj) {
+        obj.foo[0] = 0;
+        obj.foo[1] = undefined;
+        obj.foo[2] = null;
+        obj.foo[3] = null;
+        obj.foo[4] = undefined;
+        obj.foo[5] = 2;
+        obj.foo[6] = 'bar';
+      };
+
+      var genereatedPatches = getPatchesUsingGenerate(
+        objFactory,
+        objChanger
+      );
+      var expectedPatches = [];
+
+      expect(genereatedPatches).toReallyEqual(expectedPatches);
+    });
+
+    it('in objects', function() {
+      var objFactory = function() {
+        return {
+          foo:{
+            a: 0,
+            b: undefined,
+            c: null,
+            f: 2,
+            g: 'bar'}
+        };
+      };
+
+      var objChanger = function(obj) {
+        obj.foo.a = 0;
+        obj.foo.b = undefined;
+        obj.foo.c = null;
+        obj.foo.f = 2;
+        obj.foo.g = 'bar';
+        obj.foo.h = undefined;
+      };
+
+      var genereatedPatches = getPatchesUsingGenerate(
+        objFactory,
+        objChanger
+      );
+      var expectedPatches = [];
+
+      expect(genereatedPatches).toReallyEqual(expectedPatches);
     });
   });
 
