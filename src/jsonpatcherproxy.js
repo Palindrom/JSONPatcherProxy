@@ -137,8 +137,9 @@ const JSONPatcherProxy = (function() {
       operation.op = 'add';
       if (tree.hasOwnProperty(key)) {
         if (typeof tree[key] !== 'undefined') {
-          if (tree[key] == newValue)
+          if (tree[key] == newValue) {
             return true; // Value wasn't actually changed, pretend set was successful but don't generate a patch
+          }
           operation.op = 'replace';
         } else if (isTreeAnArray) {
           operation.op = 'replace'; // setting `undefined` array elements is a `replace` op
