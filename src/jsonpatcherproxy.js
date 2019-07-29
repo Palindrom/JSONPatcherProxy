@@ -2,9 +2,9 @@
 
 /*!
  * https://github.com/Palindrom/JSONPatcherProxy
- * (c) 2017 Starcounter 
+ * (c) 2017 Starcounter
  * MIT license
- * 
+ *
  * Vocabulary used in this file:
  *  * root - root object that is deeply observed by JSONPatcherProxy
  *  * tree - any subtree within the root or the root
@@ -35,7 +35,7 @@ const JSONPatcherProxy = (function() {
 
   /**
    * Walk up the parenthood tree to get the path
-   * @param {JSONPatcherProxy} instance 
+   * @param {JSONPatcherProxy} instance
    * @param {Object} tree the object you need to find its path
    */
   function getPathToTree(instance, tree) {
@@ -81,16 +81,18 @@ const JSONPatcherProxy = (function() {
     Why do we need to check instance._isProxifyingTreeNow?
 
     We need to make sure we mark revocables as inherited ONLY when we're observing,
-    because throughout the first proxification, a sub-object is proxified and then assigned to 
+    because throughout the first proxification, a sub-object is proxified and then assigned to
     its parent object. This assignment of a pre-proxified object can fool us into thinking
-    that it's a proxified object moved around, while in fact it's the first assignment ever. 
+    that it's a proxified object moved around, while in fact it's the first assignment ever.
 
-    Checking _isProxifyingTreeNow ensures this is not happening in the first proxification, 
+    Checking _isProxifyingTreeNow ensures this is not happening in the first proxification,
     but in fact is is a proxified object moved around the tree
     */
     if (subtreeMetadata && !instance._isProxifyingTreeNow) {
       subtreeMetadata.inherited = true;
     }
+
+    let warnedAboutNonIntegrerArrayProp = false;
 
     // if the new value is an object, make sure to watch it
     if (
@@ -98,8 +100,15 @@ const JSONPatcherProxy = (function() {
       typeof newValue == 'object' &&
       !instance._treeMetadataMap.has(newValue)
     ) {
-      instance._parenthoodMap.set(newValue, { parent: tree, key });
-      newValue = instance._proxifyTreeRecursively(tree, newValue, key);
+      if (Array.isArray(tree) && !Number.isInteger(+key.toString())) {
+        // This happens in Vue 1-2 (should not happen in Vue 3). See: https://github.com/vuejs/vue/issues/427, https://github.com/vuejs/vue/issues/9259
+        console.warn(`JSONPatcherProxy noticed a non-integer property ('${key}') was set for an array. This interception will not emit a patch. The value of this property is an object, but it was not proxified, because only arrays only can have numeric properties in JSON-Pointer`);
+        warnedAboutNonIntegrerArrayProp = true;
+      }
+      else {
+        instance._parenthoodMap.set(newValue, { parent: tree, key });
+        newValue = instance._proxifyTreeRecursively(tree, newValue, key);
+      }
     }
     // let's start with this operation, and may or may not update it later
     const operation = {
@@ -129,8 +138,8 @@ const JSONPatcherProxy = (function() {
     } else {
       if (isTreeAnArray && !Number.isInteger(+key.toString())) {
         /* array props (as opposed to indices) don't emit any patches, to avoid needless `length` patches */
-        if(key != 'length') {
-          console.warn('JSONPatcherProxy noticed a non-integer prop was set for an array. This will not emit a patch');
+        if(key != 'length' && !warnedAboutNonIntegrerArrayProp) {
+          console.warn(`JSONPatcherProxy noticed a non-integer property ('${key}') was set for an array. This interception will not emit a patch`);
         }
         return Reflect.set(tree, key, newValue);
       }
@@ -161,7 +170,7 @@ const JSONPatcherProxy = (function() {
       if (subtreeMetadata) {
         if (subtreeMetadata.inherited) {
           /*
-            this is an inherited proxy (an already proxified object that was moved around), 
+            this is an inherited proxy (an already proxified object that was moved around),
             we shouldn't revoke it, because even though it was removed from path1, it is still used in path2.
             And we know that because we mark moved proxies with `inherited` flag when we move them
 
@@ -186,9 +195,9 @@ const JSONPatcherProxy = (function() {
     }
   }
   /**
-    * Creates an instance of JSONPatcherProxy around your object of interest `root`. 
+    * Creates an instance of JSONPatcherProxy around your object of interest `root`.
     * @param {Object|Array} root - the object you want to wrap
-    * @param {Boolean} [showDetachedWarning = true] - whether to log a warning when a detached sub-object is modified @see {@link https://github.com/Palindrom/JSONPatcherProxy#detached-objects} 
+    * @param {Boolean} [showDetachedWarning = true] - whether to log a warning when a detached sub-object is modified @see {@link https://github.com/Palindrom/JSONPatcherProxy#detached-objects}
     * @returns {JSONPatcherProxy}
     * @constructor
     */
