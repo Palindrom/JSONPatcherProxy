@@ -14,15 +14,24 @@
 const JSONPatcherProxy = (function() {
   /**
   * Deep clones your object and returns a new object.
+  * Benchmarked as "deepFreezeCopy7" in http://jsbench.github.io/#45dbae3ed7f738d1de8e841b0f5aa43f
   */
-  function deepClone(obj) {
-    switch (typeof obj) {
+  function deepClone(orig) {
+    switch (typeof orig) {
       case 'object':
-        return JSON.parse(JSON.stringify(obj)); //Faster than ES5 clone - http://jsperf.com/deep-cloning-of-objects/5
+        if (orig === null) {
+          return orig;
+        }
+        const tmp = Array.isArray(orig) ? [] : {};
+        const keys = Object.keys(orig);
+        for (let i = 0; i < keys.length; i++) {
+            tmp[keys[i]] = deepClone(orig[keys[i]]);
+        }
+        return tmp;
       case 'undefined':
         return null; //this is how JSON.stringify behaves for array items
       default:
-        return obj; //no need to clone primitives
+        return orig; //no need to clone primitives
     }
   }
   JSONPatcherProxy.deepClone = deepClone;
@@ -140,11 +149,7 @@ const JSONPatcherProxy = (function() {
           operation.op = 'replace'; // setting `undefined` array elements is a `replace` op
         }
       }
-      if (newValue === null || typeof(newValue) !== 'object') {
-        operation.value = newValue;
-      } else {
-        operation.value = JSON.parse(JSON.stringify(newValue));
-      }
+      operation.value = deepClone(newValue);
     }
     const reflectionResult = Reflect.set(tree, key, newValue);
     instance._defaultCallback(operation);
