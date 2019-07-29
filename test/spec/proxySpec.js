@@ -547,6 +547,21 @@ describe('proxy', function() {
       expect(patches).toReallyEqual([]);
     });
 
+    it('should not modify already generated patch', function() {
+      var obj = generateDeepObjectFixture();
+      var jsonPatcherProxy = new JSONPatcherProxy(obj);
+      var observedObj = jsonPatcherProxy.observe(true);
+
+      observedObj.phoneNumbers.push({number:"456"});
+      observedObj.phoneNumbers[2].number = "789";
+
+      var patches = jsonPatcherProxy.generate();
+      expect(patches).toReallyEqual([
+        { op: 'add', path: '/phoneNumbers/2', value: { number: '456' } },
+        { op: 'replace', path: '/phoneNumbers/2/number', value: '789' }
+      ]);
+    });
+
     it('should ignore array properties', function() {
       var obj = {
         array: [1, 2, 3]
