@@ -113,6 +113,9 @@ const JSONPatcherProxy = (function() {
         // `undefined` is being set to an already undefined value, keep silent
         return Reflect.set(tree, key, newValue);
       } else {
+        if (!isSignificantChange(tree[key], newValue, isTreeAnArray)) {
+          return Reflect.set(tree, key, newValue);; // Value wasn't actually changed with respect to its JSON projection
+        }
         // when array element is set to `undefined`, should generate replace to `null`
         if (isTreeAnArray) {
           // undefined array elements are JSON.stringified to `null`
@@ -136,12 +139,10 @@ const JSONPatcherProxy = (function() {
       }
       operation.op = 'add';
       if (tree.hasOwnProperty(key)) {
-        if (typeof tree[key] !== 'undefined') {
-          if (tree[key] == newValue) {
-            return true; // Value wasn't actually changed, pretend set was successful but don't generate a patch
+        if (typeof tree[key] !== 'undefined' || isTreeAnArray) {
+          if (!isSignificantChange(tree[key], newValue, isTreeAnArray)) {
+            return Reflect.set(tree, key, newValue); // Value wasn't actually changed with respect to its JSON projection
           }
-          operation.op = 'replace';
-        } else if (isTreeAnArray) {
           operation.op = 'replace'; // setting `undefined` array elements is a `replace` op
         }
       }
@@ -150,6 +151,44 @@ const JSONPatcherProxy = (function() {
     const reflectionResult = Reflect.set(tree, key, newValue);
     instance._defaultCallback(operation);
     return reflectionResult;
+  }
+  /**
+   * Test if replacing old value with new value is a significant change, i.e. whether or not
+   * it soiuld result in a patch being generated.
+   * @param {*} oldValue old value
+   * @param {*} newValue new value
+   * @param {boolean} isTreeAnArray value resides in an array
+   */
+  function isSignificantChange(oldValue, newValue, isTreeAnArray) {
+    if (isTreeAnArray) {
+      return isSignificantChangeInArray(oldValue, newValue);
+    } else {
+      return isSignificantChangeInObject(oldValue, newValue);
+    }
+  }
+  /**
+   * Test if replacing old value with new value is a significant change in an object, i.e.
+   * whether or not it should result in a patch being generated.
+   * @param {*} oldValue old value
+   * @param {*} newValue new value
+   */
+  function isSignificantChangeInObject(oldValue, newValue) {
+    return oldValue !== newValue;
+  }
+  /**
+   * Test if replacing old value with new value is a significant change in an array, i.e.
+   * whether or not it should result in a patch being generated.
+   * @param {*} oldValue old value
+   * @param {*} newValue new value
+   */
+  function isSignificantChangeInArray(oldValue, newValue) {
+    if (typeof oldValue === 'undefined') {
+      oldValue = null;
+    }
+    if (typeof newValue === 'undefined') {
+      newValue = null;
+    }
+    return oldValue !== newValue;
   }
   /**
    * A callback to be used as the proxy delete trap callback.
