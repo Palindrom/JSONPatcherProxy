@@ -482,9 +482,9 @@ describe('proxy', function() {
     });
 
     it('should not proxify an object that is assigned as an array prop - and log a warning', function() {
-      var obj = [];
-      var jsonPatcherProxy = new JSONPatcherProxy(obj);
-      var observedObj = jsonPatcherProxy.observe(true);
+      const obj = [];
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const observedObj = jsonPatcherProxy.observe(true);
 
       spyOn(console, 'warn');
 
@@ -495,7 +495,7 @@ describe('proxy', function() {
 
       expect(console.warn).toHaveBeenCalledWith("JSONPatcherProxy noticed a non-integer property ('person') was set for an array. This interception will not emit a patch. The value is an object, but it was not proxified, because it would not be addressable in JSON-Pointer");
 
-      var patches = jsonPatcherProxy.generate();
+      const patches = jsonPatcherProxy.generate();
       expect(patches).toReallyEqual([]);
     });
 
