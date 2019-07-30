@@ -4,8 +4,8 @@ function benchmarkResultsToConsole(suite){
     console.log("==================");
     console.log("Benchmark results:");
     console.log("------------------");
-    var bench;
-    for(var testNo = 0; testNo < suite.length; testNo++){
+    let bench;
+    for(let testNo = 0; testNo < suite.length; testNo++){
         bench = suite[testNo];
         console.log(chalk.green.underline(bench.name) +
             "\n Ops/sec: " + chalk.bold.magenta(bench.hz.toFixed(bench.hz < 100 ? 2 : 0)) +
