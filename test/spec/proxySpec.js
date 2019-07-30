@@ -493,7 +493,7 @@ describe('proxy', function() {
       };
       observedObj.person.name = "Joachim";
 
-      expect(console.warn).toHaveBeenCalledWith("JSONPatcherProxy noticed a non-integer property ('person') was set for an array. This interception will not emit a patch. The value of this property is an object, but it was not proxified, because only arrays only can have numeric properties in JSON-Pointer");
+      expect(console.warn).toHaveBeenCalledWith("JSONPatcherProxy noticed a non-integer property ('person') was set for an array. This interception will not emit a patch. The value is an object, but it was not proxified, because it would not be addressable in JSON-Pointer");
 
       var patches = jsonPatcherProxy.generate();
       expect(patches).toReallyEqual([]);

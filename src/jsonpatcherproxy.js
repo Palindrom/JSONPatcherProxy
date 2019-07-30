@@ -93,6 +93,7 @@ const JSONPatcherProxy = (function() {
     }
 
     let warnedAboutNonIntegrerArrayProp = false;
+    const isTreeAnArray = Array.isArray(tree);
 
     // if the new value is an object, make sure to watch it
     if (
@@ -100,9 +101,9 @@ const JSONPatcherProxy = (function() {
       typeof newValue == 'object' &&
       !instance._treeMetadataMap.has(newValue)
     ) {
-      if (Array.isArray(tree) && !Number.isInteger(+key.toString())) {
+      if (isTreeAnArray && !Number.isInteger(+key.toString())) {
         // This happens in Vue 1-2 (should not happen in Vue 3). See: https://github.com/vuejs/vue/issues/427, https://github.com/vuejs/vue/issues/9259
-        console.warn(`JSONPatcherProxy noticed a non-integer property ('${key}') was set for an array. This interception will not emit a patch. The value of this property is an object, but it was not proxified, because only arrays only can have numeric properties in JSON-Pointer`);
+        console.warn(`JSONPatcherProxy noticed a non-integer property ('${key}') was set for an array. This interception will not emit a patch. The value is an object, but it was not proxified, because it would not be addressable in JSON-Pointer`);
         warnedAboutNonIntegrerArrayProp = true;
       }
       else {
@@ -115,7 +116,6 @@ const JSONPatcherProxy = (function() {
       op: 'remove',
       path: pathToKey
     };
-    const isTreeAnArray = Array.isArray(tree);
     if (typeof newValue == 'undefined') {
       // applying De Morgan's laws would be a tad faster, but less readable
       if (!isTreeAnArray && !tree.hasOwnProperty(key)) {
