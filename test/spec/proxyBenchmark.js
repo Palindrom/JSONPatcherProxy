@@ -7,8 +7,9 @@
   */
 
 let includeComparisons = true;
+const isNode = (typeof window === 'undefined');
 
-if (typeof window === 'undefined') {
+if (isNode) {
   const jsdom = require("jsdom");
   const { JSDOM } = jsdom;
   const dom = new JSDOM();
@@ -21,16 +22,16 @@ if (typeof window === 'undefined') {
 }
 
 if (typeof jsonpatch === 'undefined') {
-  jsonpatch = require('fast-json-patch');
+  global.jsonpatch = require('fast-json-patch');
 }
 
 if (typeof JSONPatcherProxy === 'undefined') {
-  JSONPatcherProxy = require('../../src/jsonpatcherproxy.js');
+  global.JSONPatcherProxy = require('../../src/jsonpatcherproxy.js');
 }
 
 if (typeof Benchmark === 'undefined') {
-  var Benchmark = require('benchmark');
-  var benchmarkResultsToConsole = require('./../helpers/benchmarkReporter.js')
+  global.Benchmark = require('benchmark');
+  global.benchmarkResultsToConsole = require('./../helpers/benchmarkReporter.js')
     .benchmarkResultsToConsole;
 }
 
