@@ -94,6 +94,7 @@ const JSONPatcherProxy = (function() {
 
     let warnedAboutNonIntegrerArrayProp = false;
     const isTreeAnArray = Array.isArray(tree);
+    const isNonSerializableArrayProperty = isTreeAnArray && !Number.isInteger(+key.toString());
 
     // if the new value is an object, make sure to watch it
     if (
@@ -101,7 +102,7 @@ const JSONPatcherProxy = (function() {
       typeof newValue == 'object' &&
       !instance._treeMetadataMap.has(newValue)
     ) {
-      if (isTreeAnArray && !Number.isInteger(+key.toString())) {
+      if (isNonSerializableArrayProperty) {
         // This happens in Vue 1-2 (should not happen in Vue 3). See: https://github.com/vuejs/vue/issues/427, https://github.com/vuejs/vue/issues/9259
         console.warn(`JSONPatcherProxy noticed a non-integer property ('${key}') was set for an array. This interception will not emit a patch. The value is an object, but it was not proxified, because it would not be addressable in JSON-Pointer`);
         warnedAboutNonIntegrerArrayProp = true;
@@ -136,7 +137,7 @@ const JSONPatcherProxy = (function() {
         }
       }
     } else {
-      if (isTreeAnArray && !Number.isInteger(+key.toString())) {
+      if (isNonSerializableArrayProperty) {
         /* array props (as opposed to indices) don't emit any patches, to avoid needless `length` patches */
         if(key != 'length' && !warnedAboutNonIntegrerArrayProp) {
           console.warn(`JSONPatcherProxy noticed a non-integer property ('${key}') was set for an array. This interception will not emit a patch`);
