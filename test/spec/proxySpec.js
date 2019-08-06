@@ -467,7 +467,6 @@ describe('proxy', function() {
     });
 
     it('should not generate a patch when array props are added or replaced - and log a warning', function() {
-
       const obj = [];
       const jsonPatcherProxy = new JSONPatcherProxy(obj);
       const observedObj = jsonPatcherProxy.observe(true);
@@ -476,7 +475,25 @@ describe('proxy', function() {
 
       observedObj.lastName = 'Wester';
 
-      expect(console.warn).toHaveBeenCalledWith('JSONPatcherProxy noticed a non-integer prop was set for an array. This will not emit a patch');
+      expect(console.warn).toHaveBeenCalledWith("JSONPatcherProxy noticed a non-integer property ('lastName') was set for an array. This interception will not emit a patch");
+    });
+
+    it('should not proxify an object that is assigned as an array prop - and log a warning', function() {
+      const obj = [];
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const observedObj = jsonPatcherProxy.observe(true);
+
+      spyOn(console, 'warn');
+
+      observedObj.person = {
+        name: "Albert"
+      };
+      observedObj.person.name = "Joachim";
+
+      expect(console.warn).toHaveBeenCalledWith("JSONPatcherProxy noticed a non-integer property ('person') was set for an array. This interception will not emit a patch. The value is an object, but it was not proxified, because it would not be addressable in JSON-Pointer");
+
+      const patches = jsonPatcherProxy.generate();
+      expect(patches).toReallyEqual([]);
     });
 
     it('should not generate the same patch twice (replace)', function() {
