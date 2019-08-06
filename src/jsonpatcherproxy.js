@@ -28,7 +28,7 @@ const JSONPatcherProxy = (function () {
   JSONPatcherProxy.deepClone = deepClone
 
   function escapePathComponent (str) {
-    if (str.indexOf('/') == -1 && str.indexOf('~') == -1) return str
+    if (str.indexOf('/') === -1 && str.indexOf('~') === -1) return str
     return str.replace(/~/g, '~0').replace(/\//g, '~1')
   }
   JSONPatcherProxy.escapePathComponent = escapePathComponent
@@ -109,14 +109,15 @@ const JSONPatcherProxy = (function () {
     const isTreeAnArray = Array.isArray(tree)
     if (typeof newValue === 'undefined') {
       // applying De Morgan's laws would be a tad faster, but less readable
-      if (!isTreeAnArray && !tree.hasOwnProperty(key)) {
+      if (!isTreeAnArray && !Object.prototype.hasOwnProperty.call(tree, key)) {
         // `undefined` is being set to an already undefined value, keep silent
         return Reflect.set(tree, key, newValue)
       } else {
         // when array element is set to `undefined`, should generate replace to `null`
         if (isTreeAnArray) {
           // undefined array elements are JSON.stringified to `null`
-          (operation.op = 'replace'), (operation.value = null)
+          operation.op = 'replace'
+          operation.value = null
         }
         const oldSubtreeMetadata = instance._treeMetadataMap.get(tree[key])
         if (oldSubtreeMetadata) {
@@ -129,13 +130,13 @@ const JSONPatcherProxy = (function () {
     } else {
       if (isTreeAnArray && !Number.isInteger(+key.toString())) {
         /* array props (as opposed to indices) don't emit any patches, to avoid needless `length` patches */
-        if (key != 'length') {
+        if (key !== 'length') {
           console.warn('JSONPatcherProxy noticed a non-integer prop was set for an array. This will not emit a patch')
         }
         return Reflect.set(tree, key, newValue)
       }
       operation.op = 'add'
-      if (tree.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(tree, key)) {
         if (typeof tree[key] !== 'undefined' || isTreeAnArray) {
           operation.op = 'replace' // setting `undefined` array elements is a `replace` op
         }
@@ -206,9 +207,9 @@ const JSONPatcherProxy = (function () {
     this._originalRoot = root
     this._cachedProxy = null
     this._isRecording = false
-    this._userCallback
-    this._defaultCallback
-    this._patches
+    this._userCallback = null
+    this._defaultCallback = null
+    this._patches = null
   }
 
   JSONPatcherProxy.prototype._generateProxyAtKey = function (parent, tree, key) {
@@ -234,7 +235,7 @@ const JSONPatcherProxy = (function () {
   // grab tree's leaves one by one, encapsulate them into a proxy and return
   JSONPatcherProxy.prototype._proxifyTreeRecursively = function (parent, tree, key) {
     for (const key in tree) {
-      if (tree.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(tree, key)) {
         if (tree[key] instanceof Object) {
           tree[key] = this._proxifyTreeRecursively(
             tree,
