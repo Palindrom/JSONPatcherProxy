@@ -61,7 +61,6 @@ const JSONPatcherProxy = (function() {
    * @param {Any} newValue the value being set
    */
   function trapForSet(instance, tree, key, newValue) {
-    const pathToKey = getPathToTree(instance, tree) + '/' + escapePathComponent(key);
     const subtreeMetadata = instance._treeMetadataMap.get(newValue);
 
     if (instance._treeMetadataMap.has(newValue)) {
@@ -114,52 +113,50 @@ const JSONPatcherProxy = (function() {
     }
     // let's start with this operation, and may or may not update it later
     const operation = {
-      op: 'remove',
-      path: pathToKey
     };
     if (typeof newValue == 'undefined') {
-      // applying De Morgan's laws would be a tad faster, but less readable
-      if (!isTreeAnArray && !tree.hasOwnProperty(key)) {
-        // `undefined` is being set to an already undefined value, keep silent
-        return Reflect.set(tree, key, newValue);
-      } else {
-        if (!isSignificantChange(tree[key], newValue, isTreeAnArray)) {
-          return Reflect.set(tree, key, newValue);; // Value wasn't actually changed with respect to its JSON projection
-        }
-        // when array element is set to `undefined`, should generate replace to `null`
-        if (isTreeAnArray) {
-          // undefined array elements are JSON.stringified to `null`
-          (operation.op = 'replace'), (operation.value = null);
-        }
-        const oldSubtreeMetadata = instance._treeMetadataMap.get(tree[key]);
-        if (oldSubtreeMetadata) {
-          //TODO there is no test for this!
-          instance._parenthoodMap.delete(tree[key]);
-          instance._disableTrapsForTreeMetadata(oldSubtreeMetadata);
-          instance._treeMetadataMap.delete(oldSubtreeMetadata);
-        }
-      }
-    } else {
-      if (isNonSerializableArrayProperty) {
-        /* array props (as opposed to indices) don't emit any patches, to avoid needless `length` patches */
-        if(key != 'length' && !warnedAboutNonIntegrerArrayProp) {
-          console.warn(`JSONPatcherProxy noticed a non-integer property ('${key}') was set for an array. This interception will not emit a patch`);
-        }
-        return Reflect.set(tree, key, newValue);
-      }
-      operation.op = 'add';
-      if (tree.hasOwnProperty(key)) {
-        if (typeof tree[key] !== 'undefined' || isTreeAnArray) {
-          if (!isSignificantChange(tree[key], newValue, isTreeAnArray)) {
-            return Reflect.set(tree, key, newValue); // Value wasn't actually changed with respect to its JSON projection
+      if (isTreeAnArray || tree.hasOwnProperty(key)) {
+        if (isSignificantChange(tree[key], newValue, isTreeAnArray)) {
+          // when array element is set to `undefined`, should generate replace to `null`
+          if (isTreeAnArray) {
+            // undefined array elements are JSON.stringified to `null`
+            (operation.op = 'replace'), (operation.value = null);
           }
-          operation.op = 'replace'; // setting `undefined` array elements is a `replace` op
+          else {
+            operation.op = 'remove';
+          }
+          const oldSubtreeMetadata = instance._treeMetadataMap.get(tree[key]);
+          if (oldSubtreeMetadata) {
+            //TODO there is no test for this!
+            instance._parenthoodMap.delete(tree[key]);
+            instance._disableTrapsForTreeMetadata(oldSubtreeMetadata);
+            instance._treeMetadataMap.delete(oldSubtreeMetadata);
+          }
         }
       }
+    }
+    else if (isNonSerializableArrayProperty) {
+      /* array props (as opposed to indices) don't emit any patches, to avoid needless `length` patches */
+      if(key != 'length' && !warnedAboutNonIntegrerArrayProp) {
+        console.warn(`JSONPatcherProxy noticed a non-integer property ('${key}') was set for an array. This interception will not emit a patch`);
+      }
+    }
+    else if (tree.hasOwnProperty(key) && (typeof tree[key] !== 'undefined' || isTreeAnArray)) {
+      if (isSignificantChange(tree[key], newValue, isTreeAnArray)) {
+        operation.op = 'replace'; // setting `undefined` array elements is a `replace` op
+        operation.value = newValue;
+      }
+    }
+    else {
+      operation.op = 'add';
       operation.value = newValue;
     }
+
     const reflectionResult = Reflect.set(tree, key, newValue);
-    instance._defaultCallback(operation);
+    if ( operation.op ) {
+      operation.path = getPathToTree(instance, tree) + '/' + escapePathComponent(key);
+      instance._defaultCallback(operation);
+    }
     return reflectionResult;
   }
   /**
