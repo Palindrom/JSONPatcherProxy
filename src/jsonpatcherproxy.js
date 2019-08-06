@@ -11,7 +11,7 @@
  */
 
 /** Class representing a JS Object observer  */
-const JSONPatcherProxy = (function () {
+const JSONPatcherProxy = (function createJSONPatcherProxy() {
   /**
   * Deep clones your object and returns a new object.
   */
@@ -25,13 +25,11 @@ const JSONPatcherProxy = (function () {
         return obj; // no need to clone primitives
     }
   }
-  JSONPatcherProxy.deepClone = deepClone;
 
   function escapePathComponent(str) {
-    if (str.indexOf('/') == -1 && str.indexOf('~') == -1) return str;
+    if (str.indexOf('/') === -1 && str.indexOf('~') === -1) return str;
     return str.replace(/~/g, '~0').replace(/\//g, '~1');
   }
-  JSONPatcherProxy.escapePathComponent = escapePathComponent;
 
   /**
    * Walk up the parenthood tree to get the path
@@ -40,11 +38,11 @@ const JSONPatcherProxy = (function () {
    */
   function getPathToTree(instance, tree) {
     const pathComponents = [];
-    let parenthood = instance._parenthoodMap.get(tree);
+    let parenthood = instance.parenthoodMap.get(tree);
     while (parenthood && parenthood.key) {
       // because we're walking up-tree, we need to use the array as a stack
       pathComponents.unshift(parenthood.key);
-      parenthood = instance._parenthoodMap.get(parenthood.parent);
+      parenthood = instance.parenthoodMap.get(parenthood.parent);
     }
     if (pathComponents.length) {
       const path = pathComponents.join('/');
@@ -54,7 +52,8 @@ const JSONPatcherProxy = (function () {
   }
   /**
    * A callback to be used as the proxy set trap callback.
-   * It updates parenthood map if needed, proxifies nested newly-added objects, calls default callback with the changes occurred.
+   * It updates parenthood map if needed, proxifies nested newly-added objects, calls default
+   * callback with the changes occurred.
    * @param {JSONPatcherProxy} instance JSONPatcherProxy instance
    * @param {Object} tree the affected object
    * @param {String} key the effect property's name
@@ -62,10 +61,10 @@ const JSONPatcherProxy = (function () {
    */
   function trapForSet(instance, tree, key, newValue) {
     const pathToKey = `${getPathToTree(instance, tree)}/${escapePathComponent(key)}`;
-    const subtreeMetadata = instance._treeMetadataMap.get(newValue);
+    const subtreeMetadata = instance.treeMetadataMap.get(newValue);
 
-    if (instance._treeMetadataMap.has(newValue)) {
-      instance._parenthoodMap.set(subtreeMetadata.originalObject, { parent: tree, key });
+    if (instance.treeMetadataMap.has(newValue)) {
+      instance.parenthoodMap.set(subtreeMetadata.originalObject, { parent: tree, key });
     }
     /*
         mark already proxified values as inherited.
@@ -78,7 +77,7 @@ const JSONPatcherProxy = (function () {
         That's why we need to remember the proxies that are inherited.
       */
     /*
-    Why do we need to check instance._isProxifyingTreeNow?
+    Why do we need to check instance.isProxifyingTreeNow?
 
     We need to make sure we mark revocables as inherited ONLY when we're observing,
     because throughout the first proxification, a sub-object is proxified and then assigned to
@@ -88,18 +87,19 @@ const JSONPatcherProxy = (function () {
     Checking _isProxifyingTreeNow ensures this is not happening in the first proxification,
     but in fact is is a proxified object moved around the tree
     */
-    if (subtreeMetadata && !instance._isProxifyingTreeNow) {
+    if (subtreeMetadata && !instance.isProxifyingTreeNow) {
       subtreeMetadata.inherited = true;
     }
 
     // if the new value is an object, make sure to watch it
+    let primitiveOrProxifiedNewValue = newValue;
     if (
       newValue
       && typeof newValue === 'object'
-      && !instance._treeMetadataMap.has(newValue)
+      && !instance.treeMetadataMap.has(newValue)
     ) {
-      instance._parenthoodMap.set(newValue, { parent: tree, key });
-      newValue = instance._proxifyTreeRecursively(tree, newValue, key);
+      instance.parenthoodMap.set(newValue, { parent: tree, key });
+      primitiveOrProxifiedNewValue = instance.proxifyTreeRecursively(tree, newValue, key);
     }
     // let's start with this operation, and may or may not update it later
     const operation = {
@@ -107,42 +107,43 @@ const JSONPatcherProxy = (function () {
       path: pathToKey,
     };
     const isTreeAnArray = Array.isArray(tree);
-    if (typeof newValue === 'undefined') {
+    if (typeof primitiveOrProxifiedNewValue === 'undefined') {
       // applying De Morgan's laws would be a tad faster, but less readable
-      if (!isTreeAnArray && !tree.hasOwnProperty(key)) {
+      if (!isTreeAnArray && !Object.prototype.hasOwnProperty.call(tree, key)) {
         // `undefined` is being set to an already undefined value, keep silent
-        return Reflect.set(tree, key, newValue);
+        return Reflect.set(tree, key, primitiveOrProxifiedNewValue);
       }
       // when array element is set to `undefined`, should generate replace to `null`
       if (isTreeAnArray) {
         // undefined array elements are JSON.stringified to `null`
-        (operation.op = 'replace'), (operation.value = null);
+        operation.op = 'replace';
+        operation.value = null;
       }
-      const oldSubtreeMetadata = instance._treeMetadataMap.get(tree[key]);
+      const oldSubtreeMetadata = instance.treeMetadataMap.get(tree[key]);
       if (oldSubtreeMetadata) {
         // TODO there is no test for this!
-        instance._parenthoodMap.delete(tree[key]);
-        instance._disableTrapsForTreeMetadata(oldSubtreeMetadata);
-        instance._treeMetadataMap.delete(oldSubtreeMetadata);
+        instance.parenthoodMap.delete(tree[key]);
+        instance.disableTrapsForTreeMetadata(oldSubtreeMetadata);
+        instance.treeMetadataMap.delete(oldSubtreeMetadata);
       }
     } else {
       if (isTreeAnArray && !Number.isInteger(+key.toString())) {
-        /* array props (as opposed to indices) don't emit any patches, to avoid needless `length` patches */
-        if (key != 'length') {
+        if (key !== 'length') {
+          // eslint-disable-next-line no-console
           console.warn('JSONPatcherProxy noticed a non-integer prop was set for an array. This will not emit a patch');
         }
-        return Reflect.set(tree, key, newValue);
+        return Reflect.set(tree, key, primitiveOrProxifiedNewValue);
       }
       operation.op = 'add';
-      if (tree.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(tree, key)) {
         if (typeof tree[key] !== 'undefined' || isTreeAnArray) {
           operation.op = 'replace'; // setting `undefined` array elements is a `replace` op
         }
       }
-      operation.value = newValue;
+      operation.value = primitiveOrProxifiedNewValue;
     }
-    const reflectionResult = Reflect.set(tree, key, newValue);
-    instance._defaultCallback(operation);
+    const reflectionResult = Reflect.set(tree, key, primitiveOrProxifiedNewValue);
+    instance.defaultCallback(operation);
     return reflectionResult;
   }
   /**
@@ -155,34 +156,38 @@ const JSONPatcherProxy = (function () {
   function trapForDeleteProperty(instance, tree, key) {
     if (typeof tree[key] !== 'undefined') {
       const pathToKey = `${getPathToTree(instance, tree)}/${escapePathComponent(key)}`;
-      const subtreeMetadata = instance._treeMetadataMap.get(tree[key]);
+      const subtreeMetadata = instance.treeMetadataMap.get(tree[key]);
 
       if (subtreeMetadata) {
         if (subtreeMetadata.inherited) {
           /*
             this is an inherited proxy (an already proxified object that was moved around),
-            we shouldn't revoke it, because even though it was removed from path1, it is still used in path2.
-            And we know that because we mark moved proxies with `inherited` flag when we move them
+            we shouldn't revoke it, because even though it was removed from path1, it is still used
+            in path2. And we know that because we mark moved proxies with `inherited` flag when we
+            move them.
 
-            it is a good idea to remove this flag if we come across it here, in trapForDeleteProperty.
+            it is a good idea to remove this flag if we come across it here, in
+            trapForDeleteProperty.
+
             We DO want to revoke the proxy if it was removed again.
           */
           subtreeMetadata.inherited = false;
         } else {
-          instance._parenthoodMap.delete(subtreeMetadata.originalObject);
-          instance._disableTrapsForTreeMetadata(subtreeMetadata);
-          instance._treeMetadataMap.delete(tree[key]);
+          instance.parenthoodMap.delete(subtreeMetadata.originalObject);
+          instance.disableTrapsForTreeMetadata(subtreeMetadata);
+          instance.treeMetadataMap.delete(tree[key]);
         }
       }
       const reflectionResult = Reflect.deleteProperty(tree, key);
 
-      instance._defaultCallback({
+      instance.defaultCallback({
         op: 'remove',
         path: pathToKey,
       });
 
       return reflectionResult;
     }
+    return false;
   }
   /**
     * Creates an instance of JSONPatcherProxy around your object of interest `root`.
@@ -191,26 +196,28 @@ const JSONPatcherProxy = (function () {
     * @returns {JSONPatcherProxy}
     * @constructor
     */
+  // eslint-disable-next-line no-shadow
   function JSONPatcherProxy(root, showDetachedWarning) {
-    this._isProxifyingTreeNow = false;
-    this._isObserving = false;
-    this._treeMetadataMap = new Map();
-    this._parenthoodMap = new Map();
-    // default to true
-    if (typeof showDetachedWarning !== 'boolean') {
-      showDetachedWarning = true;
+    this.isProxifyingTreeNow = false;
+    this.isObserving = false;
+    this.treeMetadataMap = new Map();
+    this.parenthoodMap = new Map();
+
+    if (typeof showDetachedWarning === 'boolean') {
+      this.showDetachedWarning = showDetachedWarning;
+    } else {
+      this.showDetachedWarning = true;
     }
 
-    this._showDetachedWarning = showDetachedWarning;
-    this._originalRoot = root;
-    this._cachedProxy = null;
-    this._isRecording = false;
-    this._userCallback;
-    this._defaultCallback;
-    this._patches;
+    this.originalRoot = root;
+    this.cachedProxy = null;
+    this.isRecording = false;
+    this.userCallback = null;
+    this.defaultCallback = null;
+    this.patches = null;
   }
 
-  JSONPatcherProxy.prototype._generateProxyAtKey = function (parent, tree, key) {
+  JSONPatcherProxy.prototype.generateProxyAtKey = function generateProxyAtKey(parent, tree, key) {
     if (!tree) {
       return tree;
     }
@@ -224,29 +231,30 @@ const JSONPatcherProxy = (function () {
     treeMetadata.originalObject = tree;
 
     /* keeping track of the object's parent and the key within the parent */
-    this._parenthoodMap.set(tree, { parent, key });
+    this.parenthoodMap.set(tree, { parent, key });
 
     /* keeping track of all the proxies to be able to revoke them later */
-    this._treeMetadataMap.set(treeMetadata.proxy, treeMetadata);
+    this.treeMetadataMap.set(treeMetadata.proxy, treeMetadata);
     return treeMetadata.proxy;
   };
   // grab tree's leaves one by one, encapsulate them into a proxy and return
-  JSONPatcherProxy.prototype._proxifyTreeRecursively = function (parent, tree, key) {
-    for (const key in tree) {
-      if (tree.hasOwnProperty(key)) {
-        if (tree[key] instanceof Object) {
-          tree[key] = this._proxifyTreeRecursively(
-            tree,
-            tree[key],
-            escapePathComponent(key),
-          );
-        }
+  JSONPatcherProxy.prototype.proxifyTreeRecursively = function proxify(parent, tree, keyInParent) {
+    const keys = Object.keys(tree);
+    for (let i = 0; i < keys.length; i += 1) {
+      const keyInTree = keys[i];
+      if (tree[keyInTree] instanceof Object) {
+        // eslint-disable-next-line no-param-reassign
+        tree[keyInTree] = this.proxifyTreeRecursively(
+          tree,
+          tree[keyInTree],
+          escapePathComponent(keyInTree),
+        );
       }
     }
-    return this._generateProxyAtKey(parent, tree, key);
+    return this.generateProxyAtKey(parent, tree, keyInParent);
   };
   // this function is for aesthetic purposes
-  JSONPatcherProxy.prototype._proxifyRoot = function (root) {
+  JSONPatcherProxy.prototype.proxifyRoot = function proxifyRoot(root) {
     /*
     while proxifying object tree,
     the proxifying operation itself is being
@@ -255,112 +263,123 @@ const JSONPatcherProxy = (function () {
     initial process;
     */
     this.pause();
-    this._isProxifyingTreeNow = true;
-    const proxifiedRoot = this._proxifyTreeRecursively(
+    this.isProxifyingTreeNow = true;
+    const proxifiedRoot = this.proxifyTreeRecursively(
       undefined,
       root,
       '',
     );
     /* OK you can record now */
-    this._isProxifyingTreeNow = false;
+    this.isProxifyingTreeNow = false;
     this.resume();
     return proxifiedRoot;
   };
   /**
-   * Turns a proxified object into a forward-proxy object; doesn't emit any patches anymore, like a normal object
+   * Turns a proxified object into a forward-proxy object; doesn't emit any patches anymore, like
+   * a normal object
    * @param {Object} treeMetadata
    */
-  JSONPatcherProxy.prototype._disableTrapsForTreeMetadata = function (treeMetadata) {
-    if (this._showDetachedWarning) {
+  JSONPatcherProxy.prototype.disableTrapsForTreeMetadata = function disableTraps(treeMetadata) {
+    if (this.showDetachedWarning) {
       const message = "You're accessing an object that is detached from the observedObject tree, see https://github.com/Palindrom/JSONPatcherProxy#detached-objects";
 
+      // eslint-disable-next-line no-param-reassign
       treeMetadata.handler.set = (
         parent,
         key,
         newValue,
       ) => {
+        // eslint-disable-next-line no-console
         console.warn(message);
         return Reflect.set(parent, key, newValue);
       };
-      treeMetadata.handler.set = (
-        parent,
-        key,
-        newValue,
-      ) => {
-        console.warn(message);
-        return Reflect.set(parent, key, newValue);
-      };
+      // eslint-disable-next-line no-param-reassign
       treeMetadata.handler.deleteProperty = (
         parent,
         key,
       ) => Reflect.deleteProperty(parent, key);
     } else {
+      // eslint-disable-next-line no-param-reassign
       delete treeMetadata.handler.set;
-      delete treeMetadata.handler.get;
+      // eslint-disable-next-line no-param-reassign
       delete treeMetadata.handler.deleteProperty;
     }
   };
   /**
-   * Proxifies the object that was passed in the constructor and returns a proxified mirror of it. Even though both parameters are options. You need to pass at least one of them.
-   * @param {Boolean} [record] - whether to record object changes to a later-retrievable patches array.
-   * @param {Function} [callback] - this will be synchronously called with every object change with a single `patch` as the only parameter.
+   * Proxifies the object that was passed in the constructor and returns a proxified mirror of it.
+   * Even though both parameters are options. You need to pass at least one of them.
+   * @param {Boolean} [record] - whether to record object changes to a later-retrievable
+   * patches array.
+   * @param {Function} [callback] - this will be synchronously called with every object change
+   * with a single `patch` as the only parameter.
    */
-  JSONPatcherProxy.prototype.observe = function (record, callback) {
+  JSONPatcherProxy.prototype.observe = function observe(record, callback) {
     if (!record && !callback) {
       throw new Error('You need to either record changes or pass a callback');
     }
-    this._isRecording = record;
-    this._userCallback = callback;
+    this.isRecording = record;
+    this.userCallback = callback;
     /*
     I moved it here to remove it from `unobserve`,
     this will also make the constructor faster, why initiate
     the array before they decide to actually observe with recording?
     They might need to use only a callback.
     */
-    if (record) this._patches = [];
-    this._cachedProxy = this._proxifyRoot(this._originalRoot);
-    return this._cachedProxy;
+    if (record) this.patches = [];
+    this.cachedProxy = this.proxifyRoot(this.originalRoot);
+    return this.cachedProxy;
   };
   /**
-   * If the observed is set to record, it will synchronously return all the patches and empties patches array.
+   * If the observed is set to record, it will synchronously return all the patches and empties
+   * patches array.
    */
-  JSONPatcherProxy.prototype.generate = function () {
-    if (!this._isRecording) {
+  JSONPatcherProxy.prototype.generate = function generate() {
+    if (!this.isRecording) {
       throw new Error('You should set record to true to get patches later');
     }
-    return this._patches.splice(0, this._patches.length);
+    return this.patches.splice(0, this.patches.length);
   };
   /**
-   * Revokes all proxies, rendering the observed object useless and good for garbage collection @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy/revocable}
+   * Revokes all proxies, rendering the observed object useless and good for garbage collection
+   * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy/revocable}
    */
-  JSONPatcherProxy.prototype.revoke = function () {
-    this._treeMetadataMap.forEach((el) => {
+  JSONPatcherProxy.prototype.revoke = function revoke() {
+    this.treeMetadataMap.forEach((el) => {
       el.revoke();
     });
   };
   /**
-   * Disables all proxies' traps, turning the observed object into a forward-proxy object, like a normal object that you can modify silently.
+   * Disables all proxies' traps, turning the observed object into a forward-proxy object, like a
+   * normal object that you can modify silently.
    */
-  JSONPatcherProxy.prototype.disableTraps = function () {
-    this._treeMetadataMap.forEach(this._disableTrapsForTreeMetadata, this);
+  JSONPatcherProxy.prototype.disableTraps = function disableTraps() {
+    this.treeMetadataMap.forEach(this.disableTrapsForTreeMetadata, this);
   };
   /**
    * Restores callback back to the original one provided to `observe`.
    */
-  JSONPatcherProxy.prototype.resume = function () {
-    this._defaultCallback = (operation) => {
-      this._isRecording && this._patches.push(operation);
-      this._userCallback && this._userCallback(operation);
+  JSONPatcherProxy.prototype.resume = function resume() {
+    this.defaultCallback = (operation) => {
+      if (this.isRecording) {
+        this.patches.push(operation);
+      }
+      if (this.userCallback) {
+        this.userCallback(operation);
+      }
     };
-    this._isObserving = true;
+    this.isObserving = true;
   };
   /**
    * Replaces callback with a noop function.
    */
-  JSONPatcherProxy.prototype.pause = function () {
-    this._defaultCallback = () => {};
-    this._isObserving = false;
+  JSONPatcherProxy.prototype.pause = function pause() {
+    this.defaultCallback = () => {};
+    this.isObserving = false;
   };
+
+  JSONPatcherProxy.deepClone = deepClone;
+  JSONPatcherProxy.escapePathComponent = escapePathComponent;
+
   return JSONPatcherProxy;
 }());
 
