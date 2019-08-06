@@ -467,7 +467,9 @@ describe('proxy', function() {
     });
 
     it('should not generate a patch when array props are added or replaced - and log a warning', function() {
-
+      const obj = [];
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const observedObj = jsonPatcherProxy.observe(true);
 
       spyOn(console, 'warn');
 
