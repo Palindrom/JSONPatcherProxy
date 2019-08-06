@@ -113,28 +113,31 @@ const JSONPatcherProxy = (function() {
       }
     }
     // let's start with this operation, and may or may not update it later
+    const valueBeforeReflection = tree[key];
+    const wasKeyInTreeBeforeReflection = tree.hasOwnProperty(key);
+    const reflectionResult = Reflect.set(tree, key, newValue);
     const operation = {
       op: 'remove',
       path: pathToKey
     };
     if (typeof newValue == 'undefined') {
       // applying De Morgan's laws would be a tad faster, but less readable
-      if (!isTreeAnArray && !tree.hasOwnProperty(key)) {
+      if (!isTreeAnArray && !wasKeyInTreeBeforeReflection) {
         // `undefined` is being set to an already undefined value, keep silent
-        return Reflect.set(tree, key, newValue);
+        return reflectionResult;
       } else {
-        if (!isSignificantChange(tree[key], newValue, isTreeAnArray)) {
-          return Reflect.set(tree, key, newValue);; // Value wasn't actually changed with respect to its JSON projection
+        if (!isSignificantChange(valueBeforeReflection, newValue, isTreeAnArray)) {
+          return reflectionResult; // Value wasn't actually changed with respect to its JSON projection
         }
         // when array element is set to `undefined`, should generate replace to `null`
         if (isTreeAnArray) {
           // undefined array elements are JSON.stringified to `null`
           (operation.op = 'replace'), (operation.value = null);
         }
-        const oldSubtreeMetadata = instance._treeMetadataMap.get(tree[key]);
+        const oldSubtreeMetadata = instance._treeMetadataMap.get(valueBeforeReflection);
         if (oldSubtreeMetadata) {
           //TODO there is no test for this!
-          instance._parenthoodMap.delete(tree[key]);
+          instance._parenthoodMap.delete(valueBeforeReflection);
           instance._disableTrapsForTreeMetadata(oldSubtreeMetadata);
           instance._treeMetadataMap.delete(oldSubtreeMetadata);
         }
@@ -145,20 +148,19 @@ const JSONPatcherProxy = (function() {
         if(key != 'length' && !warnedAboutNonIntegrerArrayProp) {
           console.warn(`JSONPatcherProxy noticed a non-integer property ('${key}') was set for an array. This interception will not emit a patch`);
         }
-        return Reflect.set(tree, key, newValue);
+        return reflectionResult;
       }
       operation.op = 'add';
-      if (tree.hasOwnProperty(key)) {
-        if (typeof tree[key] !== 'undefined' || isTreeAnArray) {
-          if (!isSignificantChange(tree[key], newValue, isTreeAnArray)) {
-            return Reflect.set(tree, key, newValue); // Value wasn't actually changed with respect to its JSON projection
+      if (wasKeyInTreeBeforeReflection) {
+        if (typeof valueBeforeReflection !== 'undefined' || isTreeAnArray) {
+          if (!isSignificantChange(valueBeforeReflection, newValue, isTreeAnArray)) {
+            return reflectionResult; // Value wasn't actually changed with respect to its JSON projection
           }
           operation.op = 'replace'; // setting `undefined` array elements is a `replace` op
         }
       }
       operation.value = newValue;
     }
-    const reflectionResult = Reflect.set(tree, key, newValue);
     instance._defaultCallback(operation);
     return reflectionResult;
   }
