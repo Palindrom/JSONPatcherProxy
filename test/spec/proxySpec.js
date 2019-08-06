@@ -1,25 +1,25 @@
 if (typeof jsonpatch === 'undefined') {
-  jsonpatch = require('fast-json-patch');
+  global.jsonpatch = require('fast-json-patch');
 }
 if (typeof JSONPatcherProxy === 'undefined') {
-  JSONPatcherProxy = require('../../src/jsonpatcherproxy');
+  global.JSONPatcherProxy = require('../../src/jsonpatcherproxy');
 }
 
 if (typeof _ === 'undefined') {
-  var _ = require('lodash');
+  global._ = require('lodash');
 }
 
 function getPatchesUsingGenerate(objFactory, objChanger) {
-  var obj = objFactory();
-  var jsonPatcherProxy = new JSONPatcherProxy(obj);
-  var observedObj = jsonPatcherProxy.observe(true);
+  const obj = objFactory();
+  const jsonPatcherProxy = new JSONPatcherProxy(obj);
+  const observedObj = jsonPatcherProxy.observe(true);
   objChanger(observedObj);
   return jsonPatcherProxy.generate();
 }
 
 function getPatchesUsingCompare(objFactory, objChanger) {
-  var obj = objFactory();
-  var mirror = JSON.parse(JSON.stringify(obj));
+  const obj = objFactory();
+  const mirror = JSON.parse(JSON.stringify(obj));
   objChanger(obj);
   return jsonpatch.compare(mirror, JSON.parse(JSON.stringify(obj)));
 }
@@ -39,7 +39,7 @@ function generateDeepObjectFixture() {
   }
 }
 
-var customMatchers = {
+const customMatchers = {
   /**
      * This matcher is only needed in Chrome 28 (Chrome 28 cannot successfully compare observed objects immediately after they have been changed. Chrome 30 is unaffected)
      * @param obj
@@ -104,8 +104,8 @@ describe('proxy', function() {
   describe('generate', function() {
     it('should generate replace', function() {
       const obj = generateDeepObjectFixture();
-      var jsonPatcherProxy = new JSONPatcherProxy(obj);
-      var observedObj = jsonPatcherProxy.observe(true);
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const observedObj = jsonPatcherProxy.observe(true);
 
       observedObj.firstName = 'Joachim';
       observedObj.lastName = 'Wester';
@@ -113,15 +113,14 @@ describe('proxy', function() {
       observedObj.phoneNumbers[0].number = '123';
       observedObj.phoneNumbers[1].number = '456';
 
-      var patches = jsonPatcherProxy.generate();
+      const patches = jsonPatcherProxy.generate();
 
       const obj2 = generateDeepObjectFixture();
       jsonpatch.applyPatch(obj2, patches);
 
       /* iOS and Android */
-      observedObj = JSONPatcherProxy.deepClone(observedObj);
-
-      expect(obj2).toReallyEqual(observedObj);
+      const observedObj2 = JSONPatcherProxy.deepClone(observedObj);
+      expect(obj2).toReallyEqual(observedObj2);
     });
     it('should generate replace (escaped chars)', function() {
       const obj = {
@@ -137,44 +136,43 @@ describe('proxy', function() {
         ]
       };
       const obj2 = JSON.parse(JSON.stringify(obj));
-      var jsonPatcherProxy = new JSONPatcherProxy(obj);
-      var observedObj = jsonPatcherProxy.observe(true);
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const observedObj = jsonPatcherProxy.observe(true);
 
       observedObj['/name/first'] = 'Joachim';
       observedObj['/name/last'] = 'Wester';
       observedObj['~phone~/numbers'][0].number = '123';
       observedObj['~phone~/numbers'][1].number = '456';
 
-      var patches = jsonPatcherProxy.generate();
+      const patches = jsonPatcherProxy.generate();
       jsonpatch.applyPatch(obj2, patches);
 
       /* iOS and Android */
-      observedObj = JSONPatcherProxy.deepClone(observedObj);
-
-      expect(obj2).toReallyEqual(observedObj);
+      const observedObj2 = JSONPatcherProxy.deepClone(observedObj);
+      expect(obj2).toReallyEqual(observedObj2);
     });
 
     it('should generate replace (2 observers)', function() {
-      var person1 = {
+      const person1 = {
         firstName: 'Alexandra',
         lastName: 'Galbreath'
       };
-      var person2 = {
+      const person2 = {
         firstName: 'Lisa',
         lastName: 'Mendoza'
       };
 
-      var jsonPatcherProxy1 = new JSONPatcherProxy(person1);
-      var observedPerson1 = jsonPatcherProxy1.observe(true);
+      const jsonPatcherProxy1 = new JSONPatcherProxy(person1);
+      const observedPerson1 = jsonPatcherProxy1.observe(true);
 
-      var jsonPatcherProxy2 = new JSONPatcherProxy(person2);
-      var observedPerson2 = jsonPatcherProxy2.observe(true);
+      const jsonPatcherProxy2 = new JSONPatcherProxy(person2);
+      const observedPerson2 = jsonPatcherProxy2.observe(true);
 
       observedPerson1.firstName = 'Alexander';
       observedPerson2.firstName = 'Lucas';
 
-      var patch1 = jsonPatcherProxy1.generate();
-      var patch2 = jsonPatcherProxy2.generate();
+      const patch1 = jsonPatcherProxy1.generate();
+      const patch2 = jsonPatcherProxy2.generate();
 
       expect(patch1).toReallyEqual([
         {
@@ -194,12 +192,12 @@ describe('proxy', function() {
 
     it('should generate replace (double change, shallow object)', function() {
       const obj = generateDeepObjectFixture();
-      var jsonPatcherProxy = new JSONPatcherProxy(obj);
-      var observedObj = jsonPatcherProxy.observe(true);
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const observedObj = jsonPatcherProxy.observe(true);
 
       observedObj.firstName = 'Marcin';
 
-      var patches = jsonPatcherProxy.generate();
+      const patches = jsonPatcherProxy.generate();
 
       expect(patches).toReallyEqual([
         {
@@ -210,8 +208,8 @@ describe('proxy', function() {
       ]);
 
       observedObj.lastName = 'Warp';
-      patches = jsonPatcherProxy.generate(); //first patch should NOT be reported again here
-      expect(patches).toReallyEqual([
+      const patches2 = jsonPatcherProxy.generate(); //first patch should NOT be reported again here
+      expect(patches2).toReallyEqual([
         {
           op: 'replace',
           path: '/lastName',
@@ -220,9 +218,9 @@ describe('proxy', function() {
       ]);
 
       /* iOS and Android */
-      observedObj = JSONPatcherProxy.deepClone(observedObj);
+      const observedObj2 = JSONPatcherProxy.deepClone(observedObj);
 
-      expect(observedObj).toReallyEqual({
+      expect(observedObj2).toReallyEqual({
         firstName: 'Marcin',
         lastName: 'Warp',
         phoneNumbers: [
@@ -238,12 +236,12 @@ describe('proxy', function() {
 
     it('should generate replace (double change, deep object)', function() {
       const obj = generateDeepObjectFixture();
-      var jsonPatcherProxy = new JSONPatcherProxy(obj);
-      var observedObj = jsonPatcherProxy.observe(true);
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const observedObj = jsonPatcherProxy.observe(true);
 
       observedObj.phoneNumbers[0].number = '123';
 
-      var patches = jsonPatcherProxy.generate();
+      const patches = jsonPatcherProxy.generate();
 
       expect(patches).toReallyEqual([
         {
@@ -254,8 +252,8 @@ describe('proxy', function() {
       ]);
 
       observedObj.phoneNumbers[1].number = '456';
-      patches = jsonPatcherProxy.generate(); //first patch should NOT be reported again here
-      expect(patches).toReallyEqual([
+      const patches2 = jsonPatcherProxy.generate(); //first patch should NOT be reported again here
+      expect(patches2).toReallyEqual([
         {
           op: 'replace',
           path: '/phoneNumbers/1/number',
@@ -264,23 +262,23 @@ describe('proxy', function() {
       ]);
 
       /* iOS and Android */
-      observedObj = JSONPatcherProxy.deepClone(observedObj);
+      const observedObj2 = JSONPatcherProxy.deepClone(observedObj);
 
       const obj2 = generateDeepObjectFixture();
       obj2.phoneNumbers[0].number = '123';
       obj2.phoneNumbers[1].number = '456';
-      expect(observedObj).toReallyEqual(obj2); //objects should be still the same
+      expect(observedObj2).toReallyEqual(obj2); //objects should be still the same
     });
 
     it('should generate replace (changes in new array cell, primitive values)', function() {
-      var arr = [1];
+      const arr = [1];
 
-      var jsonPatcherProxy = new JSONPatcherProxy(arr);
-      var observedArr = jsonPatcherProxy.observe(true);
+      const jsonPatcherProxy = new JSONPatcherProxy(arr);
+      const observedArr = jsonPatcherProxy.observe(true);
 
       observedArr.push(2);
 
-      var patches = jsonPatcherProxy.generate();
+      const patches = jsonPatcherProxy.generate();
       expect(patches).toReallyEqual([
         {
           op: 'add',
@@ -291,8 +289,8 @@ describe('proxy', function() {
 
       observedArr[0] = 3;
 
-      patches = jsonPatcherProxy.generate();
-      expect(patches).toReallyEqual([
+      const patches2 = jsonPatcherProxy.generate();
+      expect(patches2).toReallyEqual([
         {
           op: 'replace',
           path: '/0',
@@ -302,8 +300,8 @@ describe('proxy', function() {
 
       observedArr[1] = 4;
 
-      patches = jsonPatcherProxy.generate();
-      expect(patches).toReallyEqual([
+      const patches3 = jsonPatcherProxy.generate();
+      expect(patches3).toReallyEqual([
         {
           op: 'replace',
           path: '/1',
@@ -312,22 +310,22 @@ describe('proxy', function() {
       ]);
     });
     it('should generate replace (changes in new array cell, complex values)', function() {
-      var arr = [
+      const arr = [
         {
           id: 1,
           name: 'Ted'
         }
       ];
 
-      var jsonPatcherProxy = new JSONPatcherProxy(arr);
-      var observedArr = jsonPatcherProxy.observe(true);
+      const jsonPatcherProxy = new JSONPatcherProxy(arr);
+      const observedArr = jsonPatcherProxy.observe(true);
 
       observedArr.push({
         id: 2,
         name: 'Jerry'
       });
 
-      var patches = jsonPatcherProxy.generate();
+      let patches = jsonPatcherProxy.generate();
 
       /* iOS and Android */
       patches = JSONPatcherProxy.deepClone(patches);
@@ -369,8 +367,8 @@ describe('proxy', function() {
     });
     it('should generate add', function() {
       const obj = generateDeepObjectFixture();
-      var jsonPatcherProxy = new JSONPatcherProxy(obj);
-      var observedObj = jsonPatcherProxy.observe(true);
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const observedObj = jsonPatcherProxy.observe(true);
 
       observedObj.firstName = 'Joachim';
       observedObj.lastName = 'Wester';
@@ -378,23 +376,23 @@ describe('proxy', function() {
       observedObj.phoneNumbers.push({
         number: '456'
       });
-      var patches = jsonPatcherProxy.generate();
+      const patches = jsonPatcherProxy.generate();
 
-      var obj2 = generateDeepObjectFixture();
+      const obj2 = generateDeepObjectFixture();
       jsonpatch.applyPatch(obj2, patches);
       expect(obj2).toEqualInJson(observedObj);
     });
     it('should generate remove', function() {
       const obj = generateDeepObjectFixture();
-      var jsonPatcherProxy = new JSONPatcherProxy(obj);
-      var observedObj = jsonPatcherProxy.observe(true);
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const observedObj = jsonPatcherProxy.observe(true);
 
       delete observedObj.firstName;
       observedObj.lastName = 'Wester';
       observedObj.phoneNumbers[0].number = '123';
       observedObj.phoneNumbers.pop(1);
 
-      var patches = jsonPatcherProxy.generate();
+      const patches = jsonPatcherProxy.generate();
 
       const obj2 = generateDeepObjectFixture();
       jsonpatch.applyPatch(obj2, patches);
@@ -402,36 +400,36 @@ describe('proxy', function() {
     });
     it('should generate remove and disable all traps', function() {
       const obj = generateDeepObjectFixture();
-      var jsonPatcherProxy = new JSONPatcherProxy(obj);
-      var observedObj = jsonPatcherProxy.observe(true);
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const observedObj = jsonPatcherProxy.observe(true);
 
-      var cachedPhoneNumber = observedObj.phoneNumbers[1];
+      const cachedPhoneNumber = observedObj.phoneNumbers[1];
       delete observedObj.phoneNumbers[1];
 
-      var patches = jsonPatcherProxy.generate();
+      const patches = jsonPatcherProxy.generate();
 
       expect(patches.length).toEqual(1); // remove patch
 
       /* modify child object */
       cachedPhoneNumber.number = 123421;
 
-      var patches = jsonPatcherProxy.generate();
+      const patches2 = jsonPatcherProxy.generate();
 
       /* Should be zero */
-      expect(patches.length).toEqual(0);
+      expect(patches2.length).toEqual(0);
     });
 
     it('should generate remove (array indexes should be sorted descending)', function() {
-      var obj = {
+      const obj = {
         items: ['a', 'b', 'c']
       };
-      var jsonPatcherProxy = new JSONPatcherProxy(obj);
-      var observedObj = jsonPatcherProxy.observe(true);
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const observedObj = jsonPatcherProxy.observe(true);
 
       observedObj.items.pop();
       observedObj.items.pop();
 
-      var patches = jsonPatcherProxy.generate();
+      const patches = jsonPatcherProxy.generate();
 
       //array indexes must be sorted descending, otherwise there is an index collision in apply
       expect(patches).toReallyEqual([
@@ -445,7 +443,7 @@ describe('proxy', function() {
         }
       ]);
 
-      var obj2 = {
+      const obj2 = {
         items: ['a', 'b', 'c']
       };
       jsonpatch.applyPatch(obj2, patches);
@@ -453,26 +451,23 @@ describe('proxy', function() {
     });
 
     it('should not generate a patch when array props are added or replaced', function() {
-      var obj = [];
-      var jsonPatcherProxy = new JSONPatcherProxy(obj);
-      var observedObj = jsonPatcherProxy.observe(true);
+      const obj = [];
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const observedObj = jsonPatcherProxy.observe(true);
 
       observedObj.lastName = 'Wester';
 
-      var patches = jsonPatcherProxy.generate();
+      const patches = jsonPatcherProxy.generate();
       expect(patches).toReallyEqual([]);
 
       observedObj.lastName = 'Wester Jr.';
 
-      var patches = jsonPatcherProxy.generate();
-      expect(patches).toReallyEqual([]);
+      const patches2 = jsonPatcherProxy.generate();
+      expect(patches2).toReallyEqual([]);
     });
 
     it('should not generate a patch when array props are added or replaced - and log a warning', function() {
 
-      var obj = [];
-      var jsonPatcherProxy = new JSONPatcherProxy(obj);
-      var observedObj = jsonPatcherProxy.observe(true);
 
       spyOn(console, 'warn');
 
@@ -500,15 +495,15 @@ describe('proxy', function() {
     });
 
     it('should not generate the same patch twice (replace)', function() {
-      var obj = {
+      const obj = {
         lastName: 'Einstein'
       };
-      var jsonPatcherProxy = new JSONPatcherProxy(obj);
-      var observedObj = jsonPatcherProxy.observe(true);
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const observedObj = jsonPatcherProxy.observe(true);
 
       observedObj.lastName = 'Wester';
 
-      var patches = jsonPatcherProxy.generate();
+      const patches = jsonPatcherProxy.generate();
       expect(patches).toReallyEqual([
         {
           op: 'replace',
@@ -517,20 +512,20 @@ describe('proxy', function() {
         }
       ]);
 
-      patches = jsonPatcherProxy.generate();
-      expect(patches).toReallyEqual([]);
+      const patches2 = jsonPatcherProxy.generate();
+      expect(patches2).toReallyEqual([]);
     });
 
     it('should not generate the same patch twice (add)', function() {
-      var obj = {
+      const obj = {
         lastName: 'Einstein'
       };
-      var jsonPatcherProxy = new JSONPatcherProxy(obj);
-      var observedObj = jsonPatcherProxy.observe(true);
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const observedObj = jsonPatcherProxy.observe(true);
 
       observedObj.firstName = 'Albert';
 
-      var patches = jsonPatcherProxy.generate();
+      const patches = jsonPatcherProxy.generate();
 
       expect(patches).toReallyEqual([
         {
@@ -540,20 +535,20 @@ describe('proxy', function() {
         }
       ]);
 
-      patches = jsonPatcherProxy.generate();
-      expect(patches).toReallyEqual([]);
+      const patches2 = jsonPatcherProxy.generate();
+      expect(patches2).toReallyEqual([]);
     });
 
     it('should not generate the same patch twice (remove)', function() {
-      var obj = {
+      const obj = {
         lastName: 'Einstein'
       };
-      var jsonPatcherProxy = new JSONPatcherProxy(obj);
-      var observedObj = jsonPatcherProxy.observe(true);
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const observedObj = jsonPatcherProxy.observe(true);
 
       delete observedObj.lastName;
 
-      var patches = jsonPatcherProxy.generate();
+      const patches = jsonPatcherProxy.generate();
       expect(patches).toReallyEqual([
         {
           op: 'remove',
@@ -561,40 +556,38 @@ describe('proxy', function() {
         }
       ]);
 
-      patches = jsonPatcherProxy.generate();
-      expect(patches).toReallyEqual([]);
+      const patches2 = jsonPatcherProxy.generate();
+      expect(patches2).toReallyEqual([]);
     });
 
     it('should ignore array properties', function() {
-      var obj = {
+      const obj = {
         array: [1, 2, 3]
       };
 
-      var patches;
-
-      var jsonPatcherProxy = new JSONPatcherProxy(obj);
-      var observedObj = jsonPatcherProxy.observe(true);
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const observedObj = jsonPatcherProxy.observe(true);
 
       observedObj.array.value = 1;
-      patches = jsonPatcherProxy.generate();
+      const patches = jsonPatcherProxy.generate();
       expect(patches.length).toReallyEqual(0);
 
       observedObj.array.value = 2;
-      patches = jsonPatcherProxy.generate();
-      expect(patches.length).toReallyEqual(0);
+      const patches2 = jsonPatcherProxy.generate();
+      expect(patches2.length).toReallyEqual(0);
     });
 
     describe('undefined - JS to JSON projection', function() {
       it('when value is set to `undefined`, should generate remove (undefined is JSON.stringified to no value)', function() {
-        var obj = {
+        const obj = {
           foo: 'bar'
         };
 
-        var jsonPatcherProxy = new JSONPatcherProxy(obj);
-        var observedObj = jsonPatcherProxy.observe(true);
+        const jsonPatcherProxy = new JSONPatcherProxy(obj);
+        const observedObj = jsonPatcherProxy.observe(true);
         observedObj.foo = undefined;
 
-        var patches = jsonPatcherProxy.generate();
+        const patches = jsonPatcherProxy.generate();
         expect(patches).toReallyEqual([
           {
             op: 'remove',
@@ -604,28 +597,28 @@ describe('proxy', function() {
       });
 
       it('when new property is added, and set to `undefined`, nothing should be generated (undefined is JSON.stringified to no value)', function() {
-        var obj = {
+        const obj = {
           foo: 'bar'
         };
 
-        var jsonPatcherProxy = new JSONPatcherProxy(obj);
-        var observedObj = jsonPatcherProxy.observe(true);
+        const jsonPatcherProxy = new JSONPatcherProxy(obj);
+        const observedObj = jsonPatcherProxy.observe(true);
         observedObj.baz = undefined;
 
-        var patches = jsonPatcherProxy.generate();
+        const patches = jsonPatcherProxy.generate();
         expect(patches).toReallyEqual([]);
       });
 
       it('when array element is set to `undefined`, should generate replace to `null` (undefined array elements are JSON.stringified to `null`)', function() {
-        var obj = {
+        const obj = {
           foo: [0, 1, 2]
         };
 
-        var jsonPatcherProxy = new JSONPatcherProxy(obj);
-        var observedObj = jsonPatcherProxy.observe(true);
+        const jsonPatcherProxy = new JSONPatcherProxy(obj);
+        const observedObj = jsonPatcherProxy.observe(true);
         observedObj.foo[1] = undefined;
 
-        var patches = jsonPatcherProxy.generate();
+        const patches = jsonPatcherProxy.generate();
         expect(patches).toReallyEqual([
           {
             op: 'replace',
@@ -636,15 +629,15 @@ describe('proxy', function() {
       });
 
       it('when `undefined` property is set to something, should generate add (undefined in JSON.stringified to no value)', function() {
-        var obj = {
+        const obj = {
           foo: undefined
         };
 
-        var jsonPatcherProxy = new JSONPatcherProxy(obj);
-        var observedObj = jsonPatcherProxy.observe(true);
+        const jsonPatcherProxy = new JSONPatcherProxy(obj);
+        const observedObj = jsonPatcherProxy.observe(true);
         observedObj.foo = 'something';
 
-        var patches = jsonPatcherProxy.generate();
+        const patches = jsonPatcherProxy.generate();
         expect(patches).toReallyEqual([
           {
             op: 'add',
@@ -654,15 +647,15 @@ describe('proxy', function() {
         ]);
       });
       it('when `undefined` array element is set to something, should generate replace (undefined array elements are JSON.stringified to `null`)', function() {
-        var obj = {
+        const obj = {
           foo: [0, undefined, 2]
         };
 
-        var jsonPatcherProxy = new JSONPatcherProxy(obj);
-        var observedObj = jsonPatcherProxy.observe(true);
+        const jsonPatcherProxy = new JSONPatcherProxy(obj);
+        const observedObj = jsonPatcherProxy.observe(true);
         observedObj.foo[1] = 1;
 
-        var patches = jsonPatcherProxy.generate();
+        const patches = jsonPatcherProxy.generate();
         expect(patches).toReallyEqual([
           {
             op: 'replace',
@@ -676,42 +669,42 @@ describe('proxy', function() {
     describe('undefined - JSON to JS extension', function() {
       describe('should generate empty patch, when', function() {
         it('when new property is set to `undefined`', function() {
-          var objFactory = function() {
+          const objFactory = function() {
             return {
               foo: 'bar'
             };
           };
 
-          var objChanger = function(obj) {
+          const objChanger = function(obj) {
             obj.baz = undefined;
           };
 
-          var genereatedPatches = getPatchesUsingGenerate(
+          const genereatedPatches = getPatchesUsingGenerate(
             objFactory,
             objChanger
           );
-          var comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
+          const comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
 
           expect(genereatedPatches).toReallyEqual([]);
           expect(genereatedPatches).toReallyEqual(comparedPatches);
         });
 
         it('when an `undefined` property is deleted', function() {
-          var objFactory = function() {
+          const objFactory = function() {
             return {
               foo: undefined
             };
           };
 
-          var objChanger = function(obj) {
+          const objChanger = function(obj) {
             delete obj.foo;
           };
 
-          var genereatedPatches = getPatchesUsingGenerate(
+          const genereatedPatches = getPatchesUsingGenerate(
             objFactory,
             objChanger
           );
-          var comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
+          const comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
 
           expect(genereatedPatches).toReallyEqual([]);
           expect(genereatedPatches).toReallyEqual(comparedPatches);
@@ -720,21 +713,21 @@ describe('proxy', function() {
 
       describe('should generate add, when', function() {
         it('`undefined` property is set to something', function() {
-          var objFactory = function() {
+          const objFactory = function() {
             return {
               foo: undefined
             };
           };
 
-          var objChanger = function(obj) {
+          const objChanger = function(obj) {
             obj.foo = 'something';
           };
 
-          var genereatedPatches = getPatchesUsingGenerate(
+          const genereatedPatches = getPatchesUsingGenerate(
             objFactory,
             objChanger
           );
-          var comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
+          const comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
 
           expect(genereatedPatches).toReallyEqual([
             {
@@ -749,21 +742,21 @@ describe('proxy', function() {
 
       describe('should generate remove, when', function() {
         it('value is set to `undefined`', function() {
-          var objFactory = function() {
+          const objFactory = function() {
             return {
               foo: 'bar'
             };
           };
 
-          var objChanger = function(obj) {
+          const objChanger = function(obj) {
             obj.foo = undefined;
           };
 
-          var genereatedPatches = getPatchesUsingGenerate(
+          const genereatedPatches = getPatchesUsingGenerate(
             objFactory,
             objChanger
           );
-          var comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
+          const comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
 
           expect(genereatedPatches).toReallyEqual([
             {
@@ -777,21 +770,21 @@ describe('proxy', function() {
 
       describe('should generate replace, when', function() {
         it('array element is set to `undefined`', function() {
-          var objFactory = function() {
+          const objFactory = function() {
             return {
               foo: [0, 1, 2]
             };
           };
 
-          var objChanger = function(obj) {
+          const objChanger = function(obj) {
             obj.foo[1] = undefined;
           };
 
-          var genereatedPatches = getPatchesUsingGenerate(
+          const genereatedPatches = getPatchesUsingGenerate(
             objFactory,
             objChanger
           );
-          var comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
+          const comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
 
           expect(genereatedPatches).toReallyEqual([
             {
@@ -803,21 +796,21 @@ describe('proxy', function() {
           expect(genereatedPatches).toReallyEqual(comparedPatches);
         });
         it('`undefined` array element is set to something', function() {
-          var objFactory = function() {
+          const objFactory = function() {
             return {
               foo: [0, undefined, 2]
             };
           };
 
-          var objChanger = function(obj) {
+          const objChanger = function(obj) {
             obj.foo[1] = 1;
           };
 
-          var genereatedPatches = getPatchesUsingGenerate(
+          const genereatedPatches = getPatchesUsingGenerate(
             objFactory,
             objChanger
           );
-          var comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
+          const comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
 
           expect(genereatedPatches).toReallyEqual([
             {
@@ -835,10 +828,10 @@ describe('proxy', function() {
   describe('apply', function() {
     // https://tools.ietf.org/html/rfc6902#appendix-A.16
     it('should add an Array Value', function() {
-      var obj = {
+      const obj = {
         foo: ['bar']
       };
-      var patches = [
+      const patches = [
         {
           op: 'add',
           path: '/foo/-',
@@ -855,10 +848,9 @@ describe('proxy', function() {
 
   describe('callback', function() {
     it('should generate replace', function() {
-      var obj2;
       const obj = generateDeepObjectFixture();
-      var jsonPatcherProxy = new JSONPatcherProxy(obj);
-      var observedObj = jsonPatcherProxy.observe(true);
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const observedObj = jsonPatcherProxy.observe(true);
 
       jsonPatcherProxy.observe(true, function(operation) {
         objChanged(operation);
@@ -867,24 +859,24 @@ describe('proxy', function() {
       observedObj.firstName = 'Joachim';
 
       function objChanged(operation) {
-        obj2 = generateDeepObjectFixture();
+        const obj2 = generateDeepObjectFixture();
         jsonpatch.applyOperation(obj2, operation);
 
         /* iOS and Android */
-        observedObj = JSONPatcherProxy.deepClone(observedObj);
+        const observedObj2 = JSONPatcherProxy.deepClone(observedObj);
 
-        expect(obj2).toReallyEqual(observedObj);
+        expect(obj2).toReallyEqual(observedObj2);
       }
     });
 
     it('should generate replace (double change, shallow object)', function() {
-      var lastPatches,
+      let lastPatches,
         called = 0;
 
       const obj = generateDeepObjectFixture();
-      var jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
 
-      var observedObj = jsonPatcherProxy.observe(true, function(patches) {
+      const observedObj = jsonPatcherProxy.observe(true, function(patches) {
         called++;
         lastPatches = [patches];
         patchesChanged(called);
@@ -934,13 +926,13 @@ describe('proxy', function() {
     });
 
     it('should generate replace (double change, deep object)', function() {
-      var lastPatches,
+      let lastPatches,
         called = 0;
 
       const obj = generateDeepObjectFixture();
-      var jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
 
-      var observedObj = jsonPatcherProxy.observe(true);
+      const observedObj = jsonPatcherProxy.observe(true);
 
       observedObj.phoneNumbers[0].number = '123';
 
@@ -979,12 +971,12 @@ describe('proxy', function() {
       function() {
         describe('Object', function() {
           it('Addition', function() {
-            var obj = {
+            const obj = {
               firstName: 'Albert'
             };
-            var jsonPatcherProxy = new JSONPatcherProxy(obj);
+            const jsonPatcherProxy = new JSONPatcherProxy(obj);
 
-            var observedObj = jsonPatcherProxy.observe(true, function(_patches) {
+            const observedObj = jsonPatcherProxy.observe(true, function(_patches) {
               expect(observedObj.lastName).toReallyEqual('Newton');
             });
 
@@ -992,12 +984,12 @@ describe('proxy', function() {
           });
 
           it('Replacement', function() {
-            var obj = {
+            const obj = {
               firstName: 'Albert'
             };
-            var jsonPatcherProxy = new JSONPatcherProxy(obj);
+            const jsonPatcherProxy = new JSONPatcherProxy(obj);
 
-            var observedObj = jsonPatcherProxy.observe(true, function(_patches) {
+            const observedObj = jsonPatcherProxy.observe(true, function(_patches) {
               expect(observedObj.firstName).toReallyEqual('Joachim');
             });
 
@@ -1005,12 +997,12 @@ describe('proxy', function() {
           });
 
           it('Deletion', function() {
-            var obj = {
+            const obj = {
               firstName: 'Albert'
             };
-            var jsonPatcherProxy = new JSONPatcherProxy(obj);
+            const jsonPatcherProxy = new JSONPatcherProxy(obj);
 
-            var observedObj = jsonPatcherProxy.observe(true, function(_patches) {
+            const observedObj = jsonPatcherProxy.observe(true, function(_patches) {
               expect(observedObj.firstName).toReallyEqual(undefined);
             });
 
@@ -1019,13 +1011,13 @@ describe('proxy', function() {
         });
         describe('Array', function() {
           it('Addition', function() {
-            var obj = {
+            const obj = {
               firstName: 'Albert',
               numbers: [1, 2, 3]
             };
-            var jsonPatcherProxy = new JSONPatcherProxy(obj);
+            const jsonPatcherProxy = new JSONPatcherProxy(obj);
 
-            var observedObj = jsonPatcherProxy.observe(true, function(_patches) {
+            const observedObj = jsonPatcherProxy.observe(true, function(_patches) {
               expect(observedObj.numbers[3]).toReallyEqual(4);
             });
 
@@ -1033,13 +1025,13 @@ describe('proxy', function() {
           });
 
           it('Replacement', function() {
-            var obj = {
+            const obj = {
               firstName: 'Albert',
               numbers: [1, 2, 3]
             };
-            var jsonPatcherProxy = new JSONPatcherProxy(obj);
+            const jsonPatcherProxy = new JSONPatcherProxy(obj);
 
-            var observedObj = jsonPatcherProxy.observe(true, function(_patches) {
+            const observedObj = jsonPatcherProxy.observe(true, function(_patches) {
               expect(observedObj.numbers[0]).toReallyEqual(100);
             });
 
@@ -1047,13 +1039,13 @@ describe('proxy', function() {
           });
 
           it('Deletion', function() {
-            var obj = {
+            const obj = {
               firstName: 'Albert',
               numbers: [1, 2, 3]
             };
-            var jsonPatcherProxy = new JSONPatcherProxy(obj);
+            const jsonPatcherProxy = new JSONPatcherProxy(obj);
 
-            var observedObj = jsonPatcherProxy.observe(true, function(_patches) {
+            const observedObj = jsonPatcherProxy.observe(true, function(_patches) {
               expect(observedObj.numbers[0]).toReallyEqual(2);
             });
 
@@ -1064,12 +1056,12 @@ describe('proxy', function() {
     );
 
     it('generate should execute callback synchronously', function() {
-      var lastPatches,
+      let lastPatches,
         called = 0,
         res;
-        const obj = generateDeepObjectFixture();
-      var jsonPatcherProxy = new JSONPatcherProxy(obj);
-      var observedObj = jsonPatcherProxy.observe(true, function(patches) {
+      const obj = generateDeepObjectFixture();
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const observedObj = jsonPatcherProxy.observe(true, function(patches) {
         called++;
         lastPatches = [patches];
       });
@@ -1106,12 +1098,12 @@ describe('proxy', function() {
   });
   describe('Already proxified values', function() {
     it('Shifting an array should refresh path correctly', function() {
-      var obj = {
+      const obj = {
         arr: [{ name: 'omar' }, { name: 'ali' }]
       };
 
       const spy = jasmine.createSpy('spy');
-      var observedObj = new JSONPatcherProxy(obj).observe(true, spy);
+      const observedObj = new JSONPatcherProxy(obj).observe(true, spy);
 
       observedObj.arr.shift();
 
@@ -1126,7 +1118,7 @@ describe('proxy', function() {
       // should be called one more time
       expect(spy.calls.count()).toEqual(3);
 
-      var args = spy.calls.mostRecent().args[0];
+      const args = spy.calls.mostRecent().args[0];
 
       expect(args).toEqual({
         op: 'replace',
@@ -1135,17 +1127,17 @@ describe('proxy', function() {
       });
     });
     it('Moving an element in the array should change its path', function() {
-      var obj = {
+      const obj = {
         arrayOfArrays: [[{ item1: 'item1' }], [{ item2: 'item2' }]]
       };
 
       const spy = jasmine.createSpy('spy');
-      var observedObj = new JSONPatcherProxy(obj).observe(true, spy);
+      const observedObj = new JSONPatcherProxy(obj).observe(true, spy);
       const item2reference = observedObj.arrayOfArrays[1][0];
       item2reference.item2 = 'item2 modified';
 
       // control call, nothing important
-      var args = spy.calls.mostRecent().args[0];
+      let args = spy.calls.mostRecent().args[0];
 
       // path is /arrayOfArrays/1/0/item2
       expect(args).toEqual({
@@ -1173,13 +1165,13 @@ describe('proxy', function() {
 
   describe('stopping observing', function() {
     it("shouldn't emit patches after calling `disableTraps`", function() {
-      var obj = {
+      const obj = {
         foo: 'bar'
       };
 
-      var count = 0;
-      var jsonPatcherProxy = new JSONPatcherProxy(obj);
-      var observedObj = jsonPatcherProxy.observe(true, function() {
+      let count = 0;
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const observedObj = jsonPatcherProxy.observe(true, function() {
         count++;
       });
 
@@ -1196,13 +1188,13 @@ describe('proxy', function() {
       expect(count).toReallyEqual(1);
     });
     it('should throw a warning if object is modified after `disableTraps`', function() {
-      var obj = {
+      const obj = {
         foo: 'bar'
       };
 
-      var count = 0;
-      var jsonPatcherProxy = new JSONPatcherProxy(obj);
-      var observedObj = jsonPatcherProxy.observe(true, function() {
+      let count = 0;
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const observedObj = jsonPatcherProxy.observe(true, function() {
         count++;
       });
 
@@ -1220,11 +1212,11 @@ describe('proxy', function() {
       expect(console.warn).toHaveBeenCalled();
     });
     it('should throw a warning if object is modified after detached', function() {
-      var obj = { child: { name: 'omar' } };
+      const obj = { child: { name: 'omar' } };
 
-      var count = 0;
-      var jsonPatcherProxy = new JSONPatcherProxy(obj, true);
-      var observedObj = jsonPatcherProxy.observe(true, function() {
+      let count = 0;
+      const jsonPatcherProxy = new JSONPatcherProxy(obj, true);
+      const observedObj = jsonPatcherProxy.observe(true, function() {
         count++;
       });
 
@@ -1253,11 +1245,11 @@ describe('proxy', function() {
       expect(console.warn).toHaveBeenCalled();
     });
     it('should throw an error if object is modified after revoked', function() {
-      var obj = { child: { name: 'omar' } };
+      const obj = { child: { name: 'omar' } };
 
-      var count = 0;
-      var jsonPatcherProxy = new JSONPatcherProxy(obj, true);
-      var observedObj = jsonPatcherProxy.observe(true, function() {
+      let count = 0;
+      const jsonPatcherProxy = new JSONPatcherProxy(obj, true);
+      const observedObj = jsonPatcherProxy.observe(true, function() {
         count++;
       });
 
@@ -1282,10 +1274,10 @@ describe('proxy', function() {
 
   describe('pausing and resuming', function() {
     it("shouldn't emit patches when paused", function() {
-      var called = 0;
+      let called = 0;
       const obj = generateDeepObjectFixture();
-      var jsonPatcherProxy = new JSONPatcherProxy(obj);
-      var observedObj = jsonPatcherProxy.observe(true, function(patches) {
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const observedObj = jsonPatcherProxy.observe(true, function(patches) {
         called++;
       });
 
@@ -1302,10 +1294,10 @@ describe('proxy', function() {
     });
 
     it('Should re-start emitting patches when paused then resumed', function() {
-      var called = 0;
+      let called = 0;
       const obj = generateDeepObjectFixture();
-      var jsonPatcherProxy = new JSONPatcherProxy(obj);
-      var observedObj = jsonPatcherProxy.observe(true, function(patches) {
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const observedObj = jsonPatcherProxy.observe(true, function(patches) {
         called++;
       });
 
@@ -1326,13 +1318,13 @@ describe('proxy', function() {
       expect(called).toReallyEqual(3);
     });
     it('should handle callbacks that call resume() and pause() internally', function() {
-      var obj = {
+      const obj = {
         foo: 'bar'
       };
 
-      var count = 0;
-      var jsonPatcherProxy = new JSONPatcherProxy(obj);
-      var observedObj = jsonPatcherProxy.observe(true, function() {
+      let count = 0;
+      const jsonPatcherProxy = new JSONPatcherProxy(obj);
+      const observedObj = jsonPatcherProxy.observe(true, function() {
         count++;
         jsonPatcherProxy.pause();
       });
