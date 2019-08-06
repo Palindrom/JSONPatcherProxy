@@ -11,7 +11,8 @@
     "bench-compare": "node test/spec/proxyBenchmark.js --compare",
     "test": "jasmine DUPLEX=proxy JASMINE_CONFIG_PATH=test/jasmine.json",
     "test-debug": "node --inspect-brk node_modules/jasmine/bin/jasmine.js DUPLEX=proxy JASMINE_CONFIG_PATH=test/jasmine.json",
-    "version": "webpack && git add -A"
+    "version": "webpack && git add -A",
+    "lint": "eslint src --fix"
   },
   "keywords": [
     "proxy",
