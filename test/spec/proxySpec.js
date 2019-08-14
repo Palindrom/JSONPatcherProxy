@@ -768,6 +768,27 @@ describe('proxy', function() {
           ]);
           expect(generatedPatches).toReallyEqual(comparedPatches);
         });
+
+        it('Array extended with `null` or `undefined` element', function () {
+          const objFactory = function() {
+            return {
+              arr: Array(5)
+            };
+          };
+
+          const objChanger = function(obj) {
+            obj.arr[7];
+            obj.arr[7] = null;
+            obj.arr[8] = undefined;
+          };
+
+          const genereatedPatches = getPatchesUsingGenerate(
+            objFactory,
+            objChanger
+          );
+          const comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
+          expect(genereatedPatches).toReallyEqual(comparedPatches);
+        });
       });
 
       describe('should generate remove, when', function() {
