@@ -782,12 +782,13 @@ describe('proxy', function() {
             obj.arr[8] = undefined;
           };
 
-          const genereatedPatches = getPatchesUsingGenerate(
+          const generatedPatches = getPatchesUsingGenerate(
             objFactory,
             objChanger
           );
           const comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
-          expect(genereatedPatches).toReallyEqual(comparedPatches);
+          expect(generatedPatches).toReallyEqual(comparedPatches);
+          expect(generatedPatches).toReallyEqual([{ op: 'add', path: '/arr/5', value: null }, { op: 'add', path: '/arr/6', value: null }, { op: 'add', path: '/arr/7', value: null }, { op: 'add', path: '/arr/8', value: null }]);
         });
       });
 

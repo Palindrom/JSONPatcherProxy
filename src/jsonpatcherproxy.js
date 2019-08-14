@@ -115,6 +115,12 @@ const JSONPatcherProxy = (function() {
     // let's start with this operation, and may or may not update it later
     const valueBeforeReflection = tree[key];
     const wasKeyInTreeBeforeReflection = tree.hasOwnProperty(key);
+    if (isTreeAnArray && !isNonSerializableArrayProperty) {
+      const index = parseInt(key, 10);
+      if (index > tree.length) {
+        trapForSet(instance, tree, (index - 1) + '', undefined);
+      }
+    }
     const reflectionResult = Reflect.set(tree, key, newValue);
     const operation = {
       op: 'remove',
@@ -126,13 +132,18 @@ const JSONPatcherProxy = (function() {
         // `undefined` is being set to an already undefined value, keep silent
         return reflectionResult;
       } else {
-        if (!isSignificantChange(valueBeforeReflection, newValue, isTreeAnArray)) {
+        if (wasKeyInTreeBeforeReflection && !isSignificantChange(valueBeforeReflection, newValue, isTreeAnArray)) {
           return reflectionResult; // Value wasn't actually changed with respect to its JSON projection
         }
         // when array element is set to `undefined`, should generate replace to `null`
         if (isTreeAnArray) {
-          // undefined array elements are JSON.stringified to `null`
-          (operation.op = 'replace'), (operation.value = null);
+          operation.value = null;
+          if (wasKeyInTreeBeforeReflection) {
+            operation.op = 'replace';
+          }
+          else {
+            operation.op = 'add';
+          }
         }
         const oldSubtreeMetadata = instance._treeMetadataMap.get(valueBeforeReflection);
         if (oldSubtreeMetadata) {
