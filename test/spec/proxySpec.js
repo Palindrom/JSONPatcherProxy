@@ -682,14 +682,14 @@ describe('proxy', function() {
             obj.baz = undefined;
           };
 
-          const genereatedPatches = getPatchesUsingGenerate(
+          const generatedPatches = getPatchesUsingGenerate(
             objFactory,
             objChanger
           );
           const comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
 
-          expect(genereatedPatches).toReallyEqual([]);
-          expect(genereatedPatches).toReallyEqual(comparedPatches);
+          expect(generatedPatches).toReallyEqual([]);
+          expect(generatedPatches).toReallyEqual(comparedPatches);
         });
 
         it('when an `undefined` property is deleted', function() {
@@ -703,14 +703,14 @@ describe('proxy', function() {
             delete obj.foo;
           };
 
-          const genereatedPatches = getPatchesUsingGenerate(
+          const generatedPatches = getPatchesUsingGenerate(
             objFactory,
             objChanger
           );
           const comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
 
-          expect(genereatedPatches).toReallyEqual([]);
-          expect(genereatedPatches).toReallyEqual(comparedPatches);
+          expect(generatedPatches).toReallyEqual([]);
+          expect(generatedPatches).toReallyEqual(comparedPatches);
         });
       });
 
@@ -726,20 +726,20 @@ describe('proxy', function() {
             obj.foo = 'something';
           };
 
-          const genereatedPatches = getPatchesUsingGenerate(
+          const generatedPatches = getPatchesUsingGenerate(
             objFactory,
             objChanger
           );
           const comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
 
-          expect(genereatedPatches).toReallyEqual([
+          expect(generatedPatches).toReallyEqual([
             {
               op: 'add',
               path: '/foo',
               value: 'something'
             }
           ]);
-          expect(genereatedPatches).toReallyEqual(comparedPatches);
+          expect(generatedPatches).toReallyEqual(comparedPatches);
         });
 
         it('`undefined` property is set to `null`', function() {
@@ -753,20 +753,20 @@ describe('proxy', function() {
             obj.foo = null;
           };
 
-          var genereatedPatches = getPatchesUsingGenerate(
+          var generatedPatches = getPatchesUsingGenerate(
             objFactory,
             objChanger
           );
           var comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
 
-          expect(genereatedPatches).toReallyEqual([
+          expect(generatedPatches).toReallyEqual([
             {
               op: 'add',
               path: '/foo',
               value: null
             }
           ]);
-          expect(genereatedPatches).toReallyEqual(comparedPatches);
+          expect(generatedPatches).toReallyEqual(comparedPatches);
         });
       });
 
@@ -782,19 +782,19 @@ describe('proxy', function() {
             obj.foo = undefined;
           };
 
-          const genereatedPatches = getPatchesUsingGenerate(
+          const generatedPatches = getPatchesUsingGenerate(
             objFactory,
             objChanger
           );
           const comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
 
-          expect(genereatedPatches).toReallyEqual([
+          expect(generatedPatches).toReallyEqual([
             {
               op: 'remove',
               path: '/foo'
             }
           ]);
-          expect(genereatedPatches).toReallyEqual(comparedPatches);
+          expect(generatedPatches).toReallyEqual(comparedPatches);
         });
 
         it('property with `null` value is set to `undefined`', function() {
@@ -808,19 +808,19 @@ describe('proxy', function() {
             obj.foo = undefined;
           };
 
-          var genereatedPatches = getPatchesUsingGenerate(
+          var generatedPatches = getPatchesUsingGenerate(
             objFactory,
             objChanger
           );
           var comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
 
-          expect(genereatedPatches).toReallyEqual([
+          expect(generatedPatches).toReallyEqual([
             {
               op: 'remove',
               path: '/foo'
             }
           ]);
-          expect(genereatedPatches).toReallyEqual(comparedPatches);
+          expect(generatedPatches).toReallyEqual(comparedPatches);
         });
       });
 
@@ -836,20 +836,20 @@ describe('proxy', function() {
             obj.foo[1] = undefined;
           };
 
-          const genereatedPatches = getPatchesUsingGenerate(
+          const generatedPatches = getPatchesUsingGenerate(
             objFactory,
             objChanger
           );
           const comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
 
-          expect(genereatedPatches).toReallyEqual([
+          expect(generatedPatches).toReallyEqual([
             {
               op: 'replace',
               path: '/foo/1',
               value: null
             }
           ]);
-          expect(genereatedPatches).toReallyEqual(comparedPatches);
+          expect(generatedPatches).toReallyEqual(comparedPatches);
         });
         it('`undefined` array element is set to something', function() {
           const objFactory = function() {
@@ -862,20 +862,20 @@ describe('proxy', function() {
             obj.foo[1] = 1;
           };
 
-          const genereatedPatches = getPatchesUsingGenerate(
+          const generatedPatches = getPatchesUsingGenerate(
             objFactory,
             objChanger
           );
           const comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
 
-          expect(genereatedPatches).toReallyEqual([
+          expect(generatedPatches).toReallyEqual([
             {
               op: 'replace',
               path: '/foo/1',
               value: 1
             }
           ]);
-          expect(genereatedPatches).toReallyEqual(comparedPatches);
+          expect(generatedPatches).toReallyEqual(comparedPatches);
         });
       });
     });
@@ -899,13 +899,13 @@ describe('proxy', function() {
         obj.foo[6] = 'bar';
       };
 
-      var genereatedPatches = getPatchesUsingGenerate(
+      var generatedPatches = getPatchesUsingGenerate(
         objFactory,
         objChanger
       );
       var expectedPatches = [];
 
-      expect(genereatedPatches).toReallyEqual(expectedPatches);
+      expect(generatedPatches).toReallyEqual(expectedPatches);
     });
 
     it('in objects', function() {
@@ -929,13 +929,13 @@ describe('proxy', function() {
         obj.foo.h = undefined;
       };
 
-      var genereatedPatches = getPatchesUsingGenerate(
+      var generatedPatches = getPatchesUsingGenerate(
         objFactory,
         objChanger
       );
       var expectedPatches = [];
 
-      expect(genereatedPatches).toReallyEqual(expectedPatches);
+      expect(generatedPatches).toReallyEqual(expectedPatches);
     });
   });
 
