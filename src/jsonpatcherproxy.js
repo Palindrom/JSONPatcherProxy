@@ -118,6 +118,8 @@ const JSONPatcherProxy = (function() {
     if (isTreeAnArray && !isNonSerializableArrayProperty) {
       const index = parseInt(key, 10);
       if (index > tree.length) {
+        // force call trapForSet for implicit undefined elements of the array added by the JS engine
+        // because JSON-Patch spec prohibits adding an index that is higher than array.length
         trapForSet(instance, tree, (index - 1) + '', undefined);
       }
     }
