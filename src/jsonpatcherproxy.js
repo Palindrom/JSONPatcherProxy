@@ -113,25 +113,44 @@ const JSONPatcherProxy = (function() {
       }
     }
     // let's start with this operation, and may or may not update it later
+    const valueBeforeReflection = tree[key];
+    const wasKeyInTreeBeforeReflection = tree.hasOwnProperty(key);
+    if (isTreeAnArray && !isNonSerializableArrayProperty) {
+      const index = parseInt(key, 10);
+      if (index > tree.length) {
+        // force call trapForSet for implicit undefined elements of the array added by the JS engine
+        // because JSON-Patch spec prohibits adding an index that is higher than array.length
+        trapForSet(instance, tree, (index - 1) + '', undefined);
+      }
+    }
+    const reflectionResult = Reflect.set(tree, key, newValue);
     const operation = {
       op: 'remove',
       path: pathToKey
     };
     if (typeof newValue == 'undefined') {
       // applying De Morgan's laws would be a tad faster, but less readable
-      if (!isTreeAnArray && !tree.hasOwnProperty(key)) {
+      if (!isTreeAnArray && !wasKeyInTreeBeforeReflection) {
         // `undefined` is being set to an already undefined value, keep silent
-        return Reflect.set(tree, key, newValue);
+        return reflectionResult;
       } else {
+        if (wasKeyInTreeBeforeReflection && !isSignificantChange(valueBeforeReflection, newValue, isTreeAnArray)) {
+          return reflectionResult; // Value wasn't actually changed with respect to its JSON projection
+        }
         // when array element is set to `undefined`, should generate replace to `null`
         if (isTreeAnArray) {
-          // undefined array elements are JSON.stringified to `null`
-          (operation.op = 'replace'), (operation.value = null);
+          operation.value = null;
+          if (wasKeyInTreeBeforeReflection) {
+            operation.op = 'replace';
+          }
+          else {
+            operation.op = 'add';
+          }
         }
-        const oldSubtreeMetadata = instance._treeMetadataMap.get(tree[key]);
+        const oldSubtreeMetadata = instance._treeMetadataMap.get(valueBeforeReflection);
         if (oldSubtreeMetadata) {
           //TODO there is no test for this!
-          instance._parenthoodMap.delete(tree[key]);
+          instance._parenthoodMap.delete(valueBeforeReflection);
           instance._disableTrapsForTreeMetadata(oldSubtreeMetadata);
           instance._treeMetadataMap.delete(oldSubtreeMetadata);
         }
@@ -142,19 +161,59 @@ const JSONPatcherProxy = (function() {
         if(key != 'length' && !warnedAboutNonIntegrerArrayProp) {
           console.warn(`JSONPatcherProxy noticed a non-integer property ('${key}') was set for an array. This interception will not emit a patch`);
         }
-        return Reflect.set(tree, key, newValue);
+        return reflectionResult;
       }
       operation.op = 'add';
-      if (tree.hasOwnProperty(key)) {
-        if (typeof tree[key] !== 'undefined' || isTreeAnArray) {
+      if (wasKeyInTreeBeforeReflection) {
+        if (typeof valueBeforeReflection !== 'undefined' || isTreeAnArray) {
+          if (!isSignificantChange(valueBeforeReflection, newValue, isTreeAnArray)) {
+            return reflectionResult; // Value wasn't actually changed with respect to its JSON projection
+          }
           operation.op = 'replace'; // setting `undefined` array elements is a `replace` op
         }
       }
       operation.value = newValue;
     }
-    const reflectionResult = Reflect.set(tree, key, newValue);
     instance._defaultCallback(operation);
     return reflectionResult;
+  }
+  /**
+   * Test if replacing old value with new value is a significant change, i.e. whether or not
+   * it soiuld result in a patch being generated.
+   * @param {*} oldValue old value
+   * @param {*} newValue new value
+   * @param {boolean} isTreeAnArray value resides in an array
+   */
+  function isSignificantChange(oldValue, newValue, isTreeAnArray) {
+    if (isTreeAnArray) {
+      return isSignificantChangeInArray(oldValue, newValue);
+    } else {
+      return isSignificantChangeInObject(oldValue, newValue);
+    }
+  }
+  /**
+   * Test if replacing old value with new value is a significant change in an object, i.e.
+   * whether or not it should result in a patch being generated.
+   * @param {*} oldValue old value
+   * @param {*} newValue new value
+   */
+  function isSignificantChangeInObject(oldValue, newValue) {
+    return oldValue !== newValue;
+  }
+  /**
+   * Test if replacing old value with new value is a significant change in an array, i.e.
+   * whether or not it should result in a patch being generated.
+   * @param {*} oldValue old value
+   * @param {*} newValue new value
+   */
+  function isSignificantChangeInArray(oldValue, newValue) {
+    if (typeof oldValue === 'undefined') {
+      oldValue = null;
+    }
+    if (typeof newValue === 'undefined') {
+      newValue = null;
+    }
+    return oldValue !== newValue;
   }
   /**
    * A callback to be used as the proxy delete trap callback.

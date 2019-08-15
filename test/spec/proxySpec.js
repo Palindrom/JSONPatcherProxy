@@ -376,6 +376,7 @@ describe('proxy', function() {
       observedObj.phoneNumbers.push({
         number: '456'
       });
+      observedObj.nothing = null;
       const patches = jsonPatcherProxy.generate();
 
       const obj2 = generateDeepObjectFixture();
@@ -681,14 +682,14 @@ describe('proxy', function() {
             obj.baz = undefined;
           };
 
-          const genereatedPatches = getPatchesUsingGenerate(
+          const generatedPatches = getPatchesUsingGenerate(
             objFactory,
             objChanger
           );
           const comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
 
-          expect(genereatedPatches).toReallyEqual([]);
-          expect(genereatedPatches).toReallyEqual(comparedPatches);
+          expect(generatedPatches).toReallyEqual([]);
+          expect(generatedPatches).toReallyEqual(comparedPatches);
         });
 
         it('when an `undefined` property is deleted', function() {
@@ -702,14 +703,14 @@ describe('proxy', function() {
             delete obj.foo;
           };
 
-          const genereatedPatches = getPatchesUsingGenerate(
+          const generatedPatches = getPatchesUsingGenerate(
             objFactory,
             objChanger
           );
           const comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
 
-          expect(genereatedPatches).toReallyEqual([]);
-          expect(genereatedPatches).toReallyEqual(comparedPatches);
+          expect(generatedPatches).toReallyEqual([]);
+          expect(generatedPatches).toReallyEqual(comparedPatches);
         });
       });
 
@@ -725,20 +726,69 @@ describe('proxy', function() {
             obj.foo = 'something';
           };
 
-          const genereatedPatches = getPatchesUsingGenerate(
+          const generatedPatches = getPatchesUsingGenerate(
             objFactory,
             objChanger
           );
           const comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
 
-          expect(genereatedPatches).toReallyEqual([
+          expect(generatedPatches).toReallyEqual([
             {
               op: 'add',
               path: '/foo',
               value: 'something'
             }
           ]);
-          expect(genereatedPatches).toReallyEqual(comparedPatches);
+          expect(generatedPatches).toReallyEqual(comparedPatches);
+        });
+
+        it('`undefined` property is set to `null`', function() {
+          var objFactory = function() {
+            return {
+              foo: undefined
+            };
+          };
+
+          var objChanger = function(obj) {
+            obj.foo = null;
+          };
+
+          var generatedPatches = getPatchesUsingGenerate(
+            objFactory,
+            objChanger
+          );
+          var comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
+
+          expect(generatedPatches).toReallyEqual([
+            {
+              op: 'add',
+              path: '/foo',
+              value: null
+            }
+          ]);
+          expect(generatedPatches).toReallyEqual(comparedPatches);
+        });
+
+        it('Array extended with `null` or `undefined` element', function () {
+          const objFactory = function() {
+            return {
+              arr: Array(5)
+            };
+          };
+
+          const objChanger = function(obj) {
+            obj.arr[7];
+            obj.arr[7] = null;
+            obj.arr[8] = undefined;
+          };
+
+          const generatedPatches = getPatchesUsingGenerate(
+            objFactory,
+            objChanger
+          );
+          const comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
+          expect(generatedPatches).toReallyEqual(comparedPatches);
+          expect(generatedPatches).toReallyEqual([{ op: 'add', path: '/arr/5', value: null }, { op: 'add', path: '/arr/6', value: null }, { op: 'add', path: '/arr/7', value: null }, { op: 'add', path: '/arr/8', value: null }]);
         });
       });
 
@@ -754,19 +804,45 @@ describe('proxy', function() {
             obj.foo = undefined;
           };
 
-          const genereatedPatches = getPatchesUsingGenerate(
+          const generatedPatches = getPatchesUsingGenerate(
             objFactory,
             objChanger
           );
           const comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
 
-          expect(genereatedPatches).toReallyEqual([
+          expect(generatedPatches).toReallyEqual([
             {
               op: 'remove',
               path: '/foo'
             }
           ]);
-          expect(genereatedPatches).toReallyEqual(comparedPatches);
+          expect(generatedPatches).toReallyEqual(comparedPatches);
+        });
+
+        it('property with `null` value is set to `undefined`', function() {
+          var objFactory = function() {
+            return {
+              foo: null
+            };
+          };
+
+          var objChanger = function(obj) {
+            obj.foo = undefined;
+          };
+
+          var generatedPatches = getPatchesUsingGenerate(
+            objFactory,
+            objChanger
+          );
+          var comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
+
+          expect(generatedPatches).toReallyEqual([
+            {
+              op: 'remove',
+              path: '/foo'
+            }
+          ]);
+          expect(generatedPatches).toReallyEqual(comparedPatches);
         });
       });
 
@@ -782,20 +858,20 @@ describe('proxy', function() {
             obj.foo[1] = undefined;
           };
 
-          const genereatedPatches = getPatchesUsingGenerate(
+          const generatedPatches = getPatchesUsingGenerate(
             objFactory,
             objChanger
           );
           const comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
 
-          expect(genereatedPatches).toReallyEqual([
+          expect(generatedPatches).toReallyEqual([
             {
               op: 'replace',
               path: '/foo/1',
               value: null
             }
           ]);
-          expect(genereatedPatches).toReallyEqual(comparedPatches);
+          expect(generatedPatches).toReallyEqual(comparedPatches);
         });
         it('`undefined` array element is set to something', function() {
           const objFactory = function() {
@@ -808,22 +884,80 @@ describe('proxy', function() {
             obj.foo[1] = 1;
           };
 
-          const genereatedPatches = getPatchesUsingGenerate(
+          const generatedPatches = getPatchesUsingGenerate(
             objFactory,
             objChanger
           );
           const comparedPatches = getPatchesUsingCompare(objFactory, objChanger);
 
-          expect(genereatedPatches).toReallyEqual([
+          expect(generatedPatches).toReallyEqual([
             {
               op: 'replace',
               path: '/foo/1',
               value: 1
             }
           ]);
-          expect(genereatedPatches).toReallyEqual(comparedPatches);
+          expect(generatedPatches).toReallyEqual(comparedPatches);
         });
       });
+    });
+  });
+
+  describe('no-change operations should generate empty patch', function () {
+    it('in arrays', function() {
+      var objFactory = function() {
+        return {
+          foo: [0, undefined, null, undefined, null, 2, 'bar']
+        };
+      };
+
+      var objChanger = function(obj) {
+        obj.foo[0] = 0;
+        obj.foo[1] = undefined;
+        obj.foo[2] = null;
+        obj.foo[3] = null;
+        obj.foo[4] = undefined;
+        obj.foo[5] = 2;
+        obj.foo[6] = 'bar';
+      };
+
+      var generatedPatches = getPatchesUsingGenerate(
+        objFactory,
+        objChanger
+      );
+      var expectedPatches = [];
+
+      expect(generatedPatches).toReallyEqual(expectedPatches);
+    });
+
+    it('in objects', function() {
+      var objFactory = function() {
+        return {
+          foo:{
+            a: 0,
+            b: undefined,
+            c: null,
+            f: 2,
+            g: 'bar'}
+        };
+      };
+
+      var objChanger = function(obj) {
+        obj.foo.a = 0;
+        obj.foo.b = undefined;
+        obj.foo.c = null;
+        obj.foo.f = 2;
+        obj.foo.g = 'bar';
+        obj.foo.h = undefined;
+      };
+
+      var generatedPatches = getPatchesUsingGenerate(
+        objFactory,
+        objChanger
+      );
+      var expectedPatches = [];
+
+      expect(generatedPatches).toReallyEqual(expectedPatches);
     });
   });
 
