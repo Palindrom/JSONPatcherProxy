@@ -223,10 +223,11 @@ const JSONPatcherProxy = (function() {
    * @param {String} key the effected property's name
    */
   function trapForDeleteProperty(instance, tree, key) {
-    let reflectionResult;
-    if (typeof tree[key] !== 'undefined') {
+    const oldValue = tree[key];
+    const reflectionResult = Reflect.deleteProperty(tree, key);
+    if (typeof oldValue !== 'undefined') {
       const pathToKey = getPathToTree(instance, tree) + '/' + escapePathComponent(key);
-      const subtreeMetadata = instance._treeMetadataMap.get(tree[key]);
+      const subtreeMetadata = instance._treeMetadataMap.get(oldValue);
 
       if (subtreeMetadata) {
         if (subtreeMetadata.inherited) {
@@ -242,18 +243,14 @@ const JSONPatcherProxy = (function() {
         } else {
           instance._parenthoodMap.delete(subtreeMetadata.originalObject);
           instance._disableTrapsForTreeMetadata(subtreeMetadata);
-          instance._treeMetadataMap.delete(tree[key]);
+          instance._treeMetadataMap.delete(oldValue);
         }
       }
-      reflectionResult = Reflect.deleteProperty(tree, key);
 
       instance._defaultCallback({
         op: 'remove',
         path: pathToKey
       });
-
-    } else {
-      reflectionResult = Reflect.deleteProperty(tree, key);
     }
     return reflectionResult;
   }
