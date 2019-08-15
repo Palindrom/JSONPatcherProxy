@@ -5,10 +5,6 @@ if (typeof JSONPatcherProxy === 'undefined') {
   global.JSONPatcherProxy = require('../../src/jsonpatcherproxy');
 }
 
-if (typeof _ === 'undefined') {
-  global._ = require('lodash');
-}
-
 function getPatchesUsingGenerate(objFactory, objChanger) {
   const obj = objFactory();
   const jsonPatcherProxy = new JSONPatcherProxy(obj);
@@ -54,11 +50,14 @@ const customMatchers = {
       }
     };
   },
+  /**
+   * Deep equal as suggested at https://github.com/jasmine/jasmine/issues/598#issuecomment-323883525
+   */
   toReallyEqual: function(util, customEqualityTesters) {
     return {
       compare: function(actual, expected) {
         return {
-          pass: _.isEqual(actual, expected)
+          pass: util.equals(Object.assign({}, actual), Object.assign({}, expected))
         };
       }
     };
