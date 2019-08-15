@@ -223,6 +223,7 @@ const JSONPatcherProxy = (function() {
    * @param {String} key the effected property's name
    */
   function trapForDeleteProperty(instance, tree, key) {
+    let reflectionResult;
     if (typeof tree[key] !== 'undefined') {
       const pathToKey = getPathToTree(instance, tree) + '/' + escapePathComponent(key);
       const subtreeMetadata = instance._treeMetadataMap.get(tree[key]);
@@ -244,15 +245,17 @@ const JSONPatcherProxy = (function() {
           instance._treeMetadataMap.delete(tree[key]);
         }
       }
-      const reflectionResult = Reflect.deleteProperty(tree, key);
+      reflectionResult = Reflect.deleteProperty(tree, key);
 
       instance._defaultCallback({
         op: 'remove',
         path: pathToKey
       });
 
-      return reflectionResult;
+    } else {
+      reflectionResult = Reflect.deleteProperty(tree, key);
     }
+    return reflectionResult;
   }
   /**
     * Creates an instance of JSONPatcherProxy around your object of interest `root`.
