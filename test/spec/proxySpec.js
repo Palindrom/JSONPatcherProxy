@@ -1071,7 +1071,7 @@ describe('proxy', function() {
 
       observedObj.phoneNumbers[0].number = '123';
 
-      patches = jsonPatcherProxy.generate();
+      let patches = jsonPatcherProxy.generate();
       expect(patches.length).toReallyEqual(1);
 
       expect(patches).toReallyEqual([
