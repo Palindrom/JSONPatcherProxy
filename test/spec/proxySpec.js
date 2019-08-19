@@ -39,6 +39,13 @@ function generateDeepObjectFixture() {
   }
 }
 
+class Animal{
+  set age(newVal){
+    this.birthYear = 2019 - newVal;
+  }
+};
+class Dog extends Animal{};
+
 var customMatchers = {
   /**
      * This matcher is only needed in Chrome 28 (Chrome 28 cannot successfully compare observed objects immediately after they have been changed. Chrome 30 is unaffected)
@@ -155,76 +162,42 @@ describe('proxy', function() {
     });
 
     it('should generate replace (changed by setter, if explicit useReflection not provided)', function() {
-      const obj = {
-        'foo': 'old'
-      };
-      Object.defineProperty(obj, 'bar',{
-        set: function(newValue){
-          this.foo = newValue;
-        },
-        get: function(){
-          return this.foo
-        },
-        enumerable: true
-      });
+      const obj = new Dog();
       const jsonPatcherProxy = new JSONPatcherProxy(obj);
       const observedObj = jsonPatcherProxy.observe(true);
-
-      observedObj.bar = 'new';
+      observedObj.age = 5;
 
       const patches = jsonPatcherProxy.generate();
 
-      expect(patches).toContain({op:'replace', path: '/bar', value: 'new'});
-      expect(patches).toContain({op:'replace', path: '/foo', value: 'new'});
+      expect(patches).toContain({op:'add', path: '/age', value: 5});
+      expect(patches).toContain({op:'add', path: '/birthYear', value: 2014});
       expect(patches.length).toEqual(2);
     });
 
     it('should generate replace (changed by setter, if useReflection set to true)', function() {
-      const obj = {
-        'foo': 'old'
-      };
-      Object.defineProperty(obj, 'bar',{
-        set: function(newValue){
-          this.foo = newValue;
-        },
-        get: function(){
-          return this.foo
-        },
-        enumerable: true
-      });
+      const obj = new Dog();
       const jsonPatcherProxy = new JSONPatcherProxy(obj, false, true);
       const observedObj = jsonPatcherProxy.observe(true);
 
-      observedObj.bar = 'new';
+      observedObj.age = 5;
 
       const patches = jsonPatcherProxy.generate();
 
-      expect(patches).toContain({op:'replace', path: '/bar', value: 'new'});
-      expect(patches).toContain({op:'replace', path: '/foo', value: 'new'});
+      expect(patches).toContain({op:'add', path: '/age', value: 5});
+      expect(patches).toContain({op:'add', path: '/birthYear', value: 2014});
       expect(patches.length).toEqual(2);
     });
 
     it('should NOT generate replace (changed by setter, if useReflection set to false)', function() {
-      const obj = {
-        'foo': 'old'
-      };
-      Object.defineProperty(obj, 'bar',{
-        set: function(newValue){
-          this.foo = newValue;
-        },
-        get: function(){
-          return this.foo
-        },
-        enumerable: true
-      });
+      const obj = new Dog();
       const jsonPatcherProxy = new JSONPatcherProxy(obj, false, false);
       const observedObj = jsonPatcherProxy.observe(true);
 
-      observedObj.bar = 'new';
+      observedObj.age = 5;
 
       const patches = jsonPatcherProxy.generate();
 
-      expect(patches).toContain({op:'replace', path: '/bar', value: 'new'});
+      expect(patches).toContain({op:'add', path: '/age', value: 5});
       expect(patches.length).toEqual(1);
     });
 

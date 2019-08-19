@@ -33,6 +33,17 @@ const JSONPatcherProxy = (function() {
   }
   JSONPatcherProxy.escapePathComponent = escapePathComponent;
 
+  // https://gist.github.com/WebReflection/3373484
+  // (C) WebReflection - MIT Style License
+  const getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+  function getPropertyDescriptor(o, name) {
+    let proto = o, descriptor;
+    while (proto && !(
+      descriptor = getOwnPropertyDescriptor(proto, name))
+    ) proto = proto.__proto__;
+    return descriptor;
+  };
+
   /**
    * Walk up the parenthood tree to get the path
    * @param {JSONPatcherProxy} instance 
@@ -220,7 +231,7 @@ const JSONPatcherProxy = (function() {
   }
 
   JSONPatcherProxy.prototype._updateValueByAuto = function(obj, prop, newValue, context) {
-    const descriptor = Object.getOwnPropertyDescriptor(obj, prop);
+    const descriptor = getPropertyDescriptor(obj, prop);
     if (descriptor && descriptor.set) { //descriptor is undefined on array items
       return Reflect.set(obj, prop, newValue, context);
     }
