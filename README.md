@@ -167,10 +167,41 @@ See the [ECMAScript spec](http://www.ecma-international.org/ecma-262/6.0/index.h
 
 Go to `/test`
 
-In Node run:
+#### In Node
+
+Run:
 
 ```
 npm test
+```
+
+#### Benchmarking
+
+When you run `npm run bench`, few things happen:
+
+1. Five benchmark specs defined in `proxyBenchmark.js` are executed. This might take a minute.
+2. The results are appended to the `benchmark.tsv` file, including the following information for each spec:
+   - current Git commit SHA
+   - number of operations per second
+   - name of the spec
+3. At the end, in your console you will see the detailed information about the current benchmark, and the comparison of all data found in `benchmark.tsv` relatively to the first results for each given spec name, e.g.:
+
+```julia
+Observe and generate, small object (JSONPatcherProxy)
+ ec7b9bf: 136720 Ops/sec
+ 92da649: 136351 Ops/sec (0.3% worse)
+Observe and generate (JSONPatcherProxy)
+ ec7b9bf: 2762 Ops/sec
+ 92da649: 2793 Ops/sec (1.1% better)
+Primitive mutation (JSONPatcherProxy)
+ ec7b9bf: 781852 Ops/sec
+ 92da649: 781270 Ops/sec (0.1% worse)
+Complex mutation (JSONPatcherProxy)
+ ec7b9bf: 11808 Ops/sec
+ 92da649: 10692 Ops/sec (9.5% worse)
+Serialization (JSONPatcherProxy)
+ ec7b9bf: 1719 Ops/sec
+ 92da649: 1719 Ops/sec (no difference)
 ```
 
 ## Contributing

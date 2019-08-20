@@ -10,3 +10,5 @@ npm-debug.log
 
 # WebStorm
 .idea
+
+benchmark.tsv

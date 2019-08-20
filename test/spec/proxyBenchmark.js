@@ -31,8 +31,9 @@ if (typeof JSONPatcherProxy === 'undefined') {
 
 if (typeof Benchmark === 'undefined') {
   global.Benchmark = require('benchmark');
-  global.benchmarkResultsToConsole = require('./../helpers/benchmarkReporter.js')
-    .benchmarkResultsToConsole;
+  global.benchmarkResultsToConsole = require('./../helpers/benchmarkReporter.js').benchmarkResultsToConsole;
+  global.benchmarkComparisonToFile = require('./../helpers/benchmarkComparisonAdder.js').benchmarkComparisonToFile;
+  global.benchmarkComparisonToConsole = require('./../helpers/benchmarkComparisonReporter.js').benchmarkComparisonToConsole;
 }
 
 const suite = new Benchmark.Suite();
@@ -122,7 +123,7 @@ function reverseString(str) {
       jsonPatcherProxy.generate();
     });
   }
-  
+
   if (includeComparisons) {
     suite.add(`${suiteName} (fast-json-patch)`, function() {
       const obj = generateBigObjectFixture(100);
@@ -247,6 +248,8 @@ if (typeof benchmarkReporter !== 'undefined') {
 } else {
   suite.on('complete', function() {
     benchmarkResultsToConsole(suite);
+    benchmarkComparisonToFile(suite);
+    benchmarkComparisonToConsole();
   });
   suite.run();
 }
