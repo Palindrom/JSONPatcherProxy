@@ -1,9 +1,5 @@
-if (typeof jsonpatch === 'undefined') {
-  global.jsonpatch = require('fast-json-patch');
-}
-if (typeof JSONPatcherProxy === 'undefined') {
-  global.JSONPatcherProxy = require('../../src/jsonpatcherproxy');
-}
+import { JSONPatcherProxy } from '../../src/jsonpatcherproxy.js';
+import * as jsonpatch from '../../node_modules/fast-json-patch/index.mjs';
 
 function getPatchesUsingGenerate(objFactory, objChanger) {
   const obj = objFactory();
@@ -697,7 +693,7 @@ describe('proxy', function() {
               foo: undefined
             };
           };
-
+          
           const objChanger = function(obj) {
             delete obj.foo;
           };

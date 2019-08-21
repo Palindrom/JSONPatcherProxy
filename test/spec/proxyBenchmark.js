@@ -6,6 +6,12 @@
   $ npm run bench
   */
 
+ import { JSONPatcherProxy } from '../../src/jsonpatcherproxy.js';
+ import * as jsonpatch from '../../node_modules/fast-json-patch/index.mjs';
+
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+
 let includeComparisons = true;
 const isNode = (typeof window === 'undefined');
 
@@ -19,14 +25,6 @@ if (isNode) {
   if (!process.argv.includes("--compare")) {
     includeComparisons = false;
   }
-}
-
-if (typeof jsonpatch === 'undefined') {
-  global.jsonpatch = require('fast-json-patch');
-}
-
-if (typeof JSONPatcherProxy === 'undefined') {
-  global.JSONPatcherProxy = require('../../src/jsonpatcherproxy.js');
 }
 
 if (typeof Benchmark === 'undefined') {
