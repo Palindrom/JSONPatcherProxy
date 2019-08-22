@@ -8,8 +8,8 @@
   "scripts": {
     "build": "webpack",
     "build-watch": "webpack --watch",
-    "bench": "node test/spec/proxyBenchmark.js",
-    "bench-compare": "node test/spec/proxyBenchmark.js --compare",
+    "bench": "node --experimental-modules test/spec/proxyBenchmark.js",
+    "bench-compare": "node --experimental-modules test/spec/proxyBenchmark.js --compare",
     "test": "node --experimental-modules jasmine-run.js",
     "test-debug": "node --inspect-brk --experimental-modules jasmine-run.js",
     "version": "webpack && git add -A"

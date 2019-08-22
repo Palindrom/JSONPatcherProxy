@@ -3,7 +3,7 @@ import Jasmine from 'jasmine';
 
 const jasmine = new Jasmine();
 
-const pattern = process.argv[2] || 'test/spec/*.js';
+const pattern = process.argv[2] || 'test/spec/*Spec.js';
 
 jasmine.loadConfig({
     random: false,
