@@ -33,7 +33,7 @@
     "webpack-cli": "^3.2.3"
   },
   "dependencies": {
-    "fast-json-patch": "^2.1.0"
+    "fast-json-patch": "^3.0.0-0"
   },
   "//comments": "fast-json-patch is a dependency, though it is only used for type definitions and performance benchmark"
 }
