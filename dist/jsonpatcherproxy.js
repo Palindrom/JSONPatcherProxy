@@ -1,4 +1,4 @@
-/*! JSONPatcherProxy version: 0.0.10 */
+/*! JSONPatcherProxy version: 0.1.0-0 */
 var JSONPatcherProxy =
 /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache

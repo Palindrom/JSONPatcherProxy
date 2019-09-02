@@ -1,6 +1,6 @@
 {
   "name": "jsonpatcherproxy",
-  "version": "0.0.10",
+  "version": "0.1.0-0",
   "description": "Lean and mean Javascript implementation of the JSON-Patch standard (RFC 6902). Update JSON documents using delta patches.",
   "main": "src/jsonpatcherproxy.js",
   "typings": "index.d.ts",
