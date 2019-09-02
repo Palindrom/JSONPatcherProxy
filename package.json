@@ -4,13 +4,14 @@
   "description": "Lean and mean Javascript implementation of the JSON-Patch standard (RFC 6902). Update JSON documents using delta patches.",
   "main": "src/jsonpatcherproxy.js",
   "typings": "index.d.ts",
+  "type": "module",
   "scripts": {
     "build": "webpack",
     "build-watch": "webpack --watch",
-    "bench": "node test/spec/proxyBenchmark.js",
-    "bench-compare": "node test/spec/proxyBenchmark.js --compare",
-    "test": "jasmine DUPLEX=proxy JASMINE_CONFIG_PATH=test/jasmine.json",
-    "test-debug": "node --inspect-brk node_modules/jasmine/bin/jasmine.js DUPLEX=proxy JASMINE_CONFIG_PATH=test/jasmine.json",
+    "bench": "node --experimental-modules test/spec/proxyBenchmark.js",
+    "bench-compare": "node --experimental-modules test/spec/proxyBenchmark.js --compare",
+    "test": "node --experimental-modules jasmine-run.js",
+    "test-debug": "node --inspect-brk --experimental-modules jasmine-run.js",
     "version": "webpack && git add -A"
   },
   "keywords": [
@@ -32,7 +33,7 @@
     "webpack-cli": "^3.2.3"
   },
   "dependencies": {
-    "fast-json-patch": "^2.1.0"
+    "fast-json-patch": "^3.0.0-0"
   },
   "//comments": "fast-json-patch is a dependency, though it is only used for type definitions and performance benchmark"
 }

@@ -22,12 +22,17 @@
     <link rel="stylesheet" type="text/css" href="lib/benchmark_reporter.css">
 
 
-    <!-- include source files here... -->
-    <script src="../src/jsonpatcherproxy.js"></script>
-
+    <!-- Import map for running (`require`'ing) Benchmark in a browser -->
+    <script type="importmap">
+      {
+          "imports": {
+              "module": ["./helpers/fake-module.js"]
+          }
+      }
+    </script>
     <!-- include spec files here... -->
-    <script src="spec/proxyBenchmark.js"></script>
-    <script src="spec/proxySpec.js"></script>
+    <script type="module" src="./spec/proxyBenchmark.js"></script>
+    <script type="module" src="./spec/proxySpec.js"></script>
 
   </head>
 

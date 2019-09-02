@@ -44,23 +44,26 @@ $ npm install jsonpatcherproxy --save
 
 ### In a web browser
 
-* Include `dist/jsonpatcherproxy.min.js`,  as in:
+Load the bundled distribution script:
+
+```html
+<script src="dist/jsonpatcherproxy.min.js"></script>
 ```
-<script src="dist/jsonpatcherproxy.js"></script>
+
+In [browsers that support ECMAScript modules](https://caniuse.com/#feat=es6-module), the below code uses this library as a module:
+
+```html
+<script type="module">
+  import { JSONPatcherProxy } from 'jsonpatcherproxy/src/jsonpatcherproxy.mjs';
+</script>
 ```
 
 **You can use rawgit.com as a CDN**.
 
 ### In Node.js
 
-Call require to get the instance:
-
 ```js
-var JSONPatcherProxy = require('jsonpatcherproxy');
-```
-Or in ES6 and TS:
-```js
-import JSONPatcherProxy from 'jsonpatcherproxy';
+import { JSONPatcherProxy } from 'jsonpatcherproxy';
 ```
 ## Usage
 
