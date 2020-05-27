@@ -72,4 +72,4 @@ declare class JSONPatcherProxy<T> {
      */
     public pause(): void;
 }
-export default JSONPatcherProxy;
+export { JSONPatcherProxy };
