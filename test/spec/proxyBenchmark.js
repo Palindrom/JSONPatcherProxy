@@ -29,9 +29,9 @@ if (isNode) {
 
 if (typeof Benchmark === 'undefined') {
   global.Benchmark = require('benchmark');
-  global.benchmarkResultsToConsole = require('./../helpers/benchmarkReporter.js').benchmarkResultsToConsole;
-  global.benchmarkComparisonToFile = require('./../helpers/benchmarkComparisonAdder.js').benchmarkComparisonToFile;
-  global.benchmarkComparisonToConsole = require('./../helpers/benchmarkComparisonReporter.js').benchmarkComparisonToConsole;
+  global.benchmarkResultsToConsole = require('./../helpers/benchmarkReporter.cjs').benchmarkResultsToConsole;
+  global.benchmarkComparisonToFile = require('./../helpers/benchmarkComparisonAdder.cjs').benchmarkComparisonToFile;
+  global.benchmarkComparisonToConsole = require('./../helpers/benchmarkComparisonReporter.cjs').benchmarkComparisonToConsole;
 }
 
 const suite = new Benchmark.Suite();
